@@ -26,7 +26,7 @@ watchdog: Watchdog = None
 
 
 def check():
-    shops = tgtg_client.get_items(page_size=10)
+    shops = tgtg_client.get_items(page_size=400)
     for shop in shops:
         stock = shop["items_available"]
         item_id = shop["item"]["item_id"]
