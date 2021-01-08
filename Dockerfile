@@ -1,5 +1,5 @@
 # inspired by https://medium.com/@harpalsahota/dockerizing-python-poetry-applications-1aa3acb76287
-FROM python:3.7-slim
+FROM python:3.7
 
 RUN mkdir /app
 
