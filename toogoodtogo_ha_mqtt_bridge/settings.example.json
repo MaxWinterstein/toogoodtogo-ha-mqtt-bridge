@@ -1,0 +1,12 @@
+{
+  "mqtt": {
+    "host": "homeassistant.local",
+    "port": 1883,
+    "username": "mqtt",
+    "password": "mqtt"
+  },
+  "toogoodtogo": {
+    "email": "me@example.ocm",
+    "password": "iliketurtles"
+  }
+}

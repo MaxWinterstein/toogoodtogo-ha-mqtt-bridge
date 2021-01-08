@@ -1,0 +1,23 @@
+[tool.black]
+line-length = 88
+
+[tool.isort]
+profile = "black"
+
+[tool.poetry]
+name = "toogoodtogo-ha-mqtt-bridge"
+version = "0.1.0"
+description = ""
+authors = ["Max Winterstein <github@winterstein.mx>"]
+
+[tool.poetry.dependencies]
+python = "^3.7"
+paho-mqtt = "^1.5.1"
+dynaconf = "^3.1.2"
+tgtg = "^0.4.0"
+coloredlogs = "^15.0"
+tenacity = "^6.3.1"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
