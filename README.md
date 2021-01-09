@@ -14,7 +14,7 @@ Easiest way is to use the Home Assistant Add-on. I created one in [my Home Assis
 
 Docker image is created automatically and available at dockerhub: [maxwinterstein/toogoodtogo-ha-mqtt-bridge](https://hub.docker.com/r/maxwinterstein/toogoodtogo-ha-mqtt-bridge)
 
-Create some settings file called `settings.json`:
+Create some settings file called `settings.local.json`:
 
 ```json
 {
@@ -34,7 +34,7 @@ Create some settings file called `settings.json`:
 And start with the mounted settings file, e.g. for Mac OS:
 
 ```bash
-docker run --rm -ti -v $PWD/settings.json:/app/settings.json Dmaxwinterstein/toogoodtogo-ha-mqtt-bridge
+docker run --rm -ti -v $PWD/settings.local.json:/app/settings.local.json maxwinterstein/toogoodtogo-ha-mqtt-bridge
 ```
 
 ## Attributes
