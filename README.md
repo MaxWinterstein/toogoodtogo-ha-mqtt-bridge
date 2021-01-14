@@ -26,10 +26,13 @@ Create some settings file called `settings.local.json`:
   },
   "toogoodtogo": {
     "email": "me@example.ocm",
-    "password": "iliketurtles"
+    "password": "iliketurtles",
+    "every_n_minutes": 5
   }
 }
 ```
+
+`every_n_minutes` sets the polling intervall. A value of e.g. 10 would fetch data every 10 minutes.
 
 And start with the mounted settings file, e.g. for Mac OS:
 

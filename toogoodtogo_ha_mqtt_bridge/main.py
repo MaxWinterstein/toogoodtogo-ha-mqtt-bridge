@@ -59,8 +59,7 @@ def check():
             json.dumps(
                 {
                     "price": (
-                        shop["item"]["price"]["minor_units"]
-                        / pow(10, shop["item"]["price"]["decimals"])
+                        shop["item"]["price"]["minor_units"] / pow(10, shop["item"]["price"]["decimals"])
                     ),
                     "stock_available": True if stock > 0 else False,
                     "url": f"http://share.toogoodtogo.com/item/{item_id}",
@@ -81,7 +80,7 @@ def loop(event):
         else:
             logger.debug("Loop run finished")
         watchdog.reset()
-        event.wait(30)
+        event.wait(settings.tgtg.every_n_minutes * 60)
 
 
 def watchdog_handler():
@@ -93,14 +92,15 @@ def watchdog_handler():
 def start():
 
     global watchdog, mqtt_client
-    watchdog = Watchdog(timeout=300, user_handler=watchdog_handler)
+    watchdog = Watchdog(
+        timeout=settings.tgtg.every_n_minutes * 60 * 3 + 30,  # 3 pull intervals + 1 timeout
+        user_handler=watchdog_handler,
+    )
 
     logger.info("Connecting mqtt")
     mqtt_client = mqtt.Client("toogoodtogo-ha-mqtt-bridge")
     if settings.mqtt.username:
-        mqtt_client.username_pw_set(
-            username=settings.mqtt.username, password=settings.mqtt.password
-        )
+        mqtt_client.username_pw_set(username=settings.mqtt.username, password=settings.mqtt.password)
     mqtt_client.connect(host=settings.mqtt.host, port=int(settings.mqtt.port))
 
     event = threading.Event()

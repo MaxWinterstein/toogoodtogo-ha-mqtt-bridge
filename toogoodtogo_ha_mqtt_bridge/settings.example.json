@@ -7,6 +7,7 @@
   },
   "tgtg": {
     "email": "me@example.ocm",
-    "password": "iliketurtles"
+    "password": "iliketurtles",
+    "every_n_minutes": 10
   }
 }
