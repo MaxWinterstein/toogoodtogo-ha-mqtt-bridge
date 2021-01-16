@@ -3,6 +3,7 @@ import logging
 import os
 import threading
 
+import arrow
 import coloredlogs
 import paho.mqtt.client as mqtt
 import watchdog
@@ -54,15 +55,37 @@ def check():
             json.dumps({"stock": stock}),
         )
 
+        # prepare attrs
+        price = shop["item"]["price"]["minor_units"] / pow(10, shop["item"]["price"]["decimals"])
+        pickup_start_date = (
+            None if not stock else arrow.get(shop["pickup_interval"]["start"]).to(tz=settings.timezone)
+        )
+        pickup_end_date = (
+            None if not stock else arrow.get(shop["pickup_interval"]["end"]).to(tz=settings.timezone)
+        )
+        pickup_start_str = ("Unknown" if stock == 0 else pickup_start_date.to(tz=settings.timezone).format(),)
+        pickup_end_str = ("Unknown" if stock == 0 else pickup_end_date.to(tz=settings.timezone).format(),)
+        pickup_start_human = (
+            "Unknown"
+            if stock == 0
+            else pickup_start_date.humanize(only_distance=False, locale=settings.locale)
+        )
+        pickup_end_human = (
+            "Unknown" if stock == 0 else pickup_end_date.humanize(only_distance=False, locale=settings.locale)
+        )
+        picture = shop["store"]["logo_picture"]["current_url"]
         mqtt_client.publish(
             f"homeassistant/sensor/toogoodtogo_{item_id}/attr",
             json.dumps(
                 {
-                    "price": (
-                        shop["item"]["price"]["minor_units"] / pow(10, shop["item"]["price"]["decimals"])
-                    ),
+                    "price": price,
                     "stock_available": True if stock > 0 else False,
                     "url": f"http://share.toogoodtogo.com/item/{item_id}",
+                    "pickup_start": pickup_start_str,
+                    "pickup_start_human": pickup_start_human,
+                    "pickup_end": pickup_end_str,
+                    "pickup_end_human": pickup_end_human,
+                    "picture": picture,
                 }
             ),
         )

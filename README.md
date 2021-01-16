@@ -34,6 +34,10 @@ Create some settings file called `settings.local.json`:
 
 `every_n_minutes` sets the polling intervall. A value of e.g. 10 would fetch data every 10 minutes.
 
+`timezone` (optional) as TooGoodToGo provides its times as UTC we format it to local time. See [Wikipedia](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones) for valid values.
+
+`locale` (optional) to format pickup times like _in 2 hours_. E.g. `de` for german, `en_us` for american english.
+
 And start with the mounted settings file, e.g. for Mac OS:
 
 ```bash
