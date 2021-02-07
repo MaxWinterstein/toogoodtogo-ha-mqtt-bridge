@@ -2,6 +2,7 @@ import json
 import logging
 import os
 import threading
+from time import sleep
 
 import arrow
 import coloredlogs
@@ -35,7 +36,7 @@ def check():
         logger.debug(f"Pushing message for {shop['display_name']} // {item_id}")
 
         # Autodiscover
-        mqtt_client.publish(
+        result_ad = mqtt_client.publish(
             f"homeassistant/sensor/toogoodtogo_{item_id}/config",
             json.dumps(
                 {
@@ -50,7 +51,7 @@ def check():
             ),
         )
 
-        mqtt_client.publish(
+        result_state = mqtt_client.publish(
             f"homeassistant/sensor/toogoodtogo_{item_id}/state",
             json.dumps({"stock": stock}),
         )
@@ -74,7 +75,7 @@ def check():
             "Unknown" if stock == 0 else pickup_end_date.humanize(only_distance=False, locale=settings.locale)
         )
         picture = shop["store"]["logo_picture"]["current_url"]
-        mqtt_client.publish(
+        result_attrs = mqtt_client.publish(
             f"homeassistant/sensor/toogoodtogo_{item_id}/attr",
             json.dumps(
                 {
@@ -89,6 +90,14 @@ def check():
                 }
             ),
         )
+        logger.debug(
+            f"Message published: Autodiscover: {bool(result_ad.rc == mqtt.MQTT_ERR_SUCCESS)}, "
+            f"State: {bool(result_state.rc == mqtt.MQTT_ERR_SUCCESS)}, "
+            f"Attributes: {bool(result_attrs.rc == mqtt.MQTT_ERR_SUCCESS)}"
+        )
+        if not result_ad.rc == result_state.rc == result_attrs.rc == mqtt.MQTT_ERR_SUCCESS:
+            logger.warning("Seems like some message was not transferred successfully.")
+            return False
 
     return True
 
@@ -98,18 +107,25 @@ def loop(event):
     while True:
         logger.debug("Loop run started")
         if not check():
-            logger.error("Stopping loop as retries exhausted.")
-            # shutdown()
+            logger.error("Loop was not successfully.")
         else:
             logger.debug("Loop run finished")
-        watchdog.reset()
+            watchdog.reset()
         event.wait(settings.tgtg.every_n_minutes * 60)
 
 
 def watchdog_handler():
-    logger.error("Watchdog handler fired! No pull in the last 5 minutes!")
+    logger.error(f"Watchdog handler fired! No pull in the last {settings.tgtg.every_n_minutes} minutes!")
 
     os._exit(1)  # easy way to die from within a thread
+
+
+def on_disconnect(client, userdata, rc):
+    if rc != 0:
+        logger.error("Wow, mqtt client lost connection. Will try to reconnect once in 30s.")
+        sleep(30)
+        logger.debug("Trying to reconnect")
+        client.reconnect()
 
 
 def start():
@@ -125,6 +141,7 @@ def start():
     if settings.mqtt.username:
         mqtt_client.username_pw_set(username=settings.mqtt.username, password=settings.mqtt.password)
     mqtt_client.connect(host=settings.mqtt.host, port=int(settings.mqtt.port))
+    mqtt_client.on_disconnect = on_disconnect
 
     event = threading.Event()
 
