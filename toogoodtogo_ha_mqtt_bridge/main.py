@@ -142,6 +142,7 @@ def start():
         mqtt_client.username_pw_set(username=settings.mqtt.username, password=settings.mqtt.password)
     mqtt_client.connect(host=settings.mqtt.host, port=int(settings.mqtt.port))
     mqtt_client.on_disconnect = on_disconnect
+    mqtt_client.loop_start()
 
     event = threading.Event()
 
