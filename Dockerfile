@@ -10,7 +10,7 @@ WORKDIR /app
 
 ENV PYTHONPATH=${PYTHONPATH}:${PWD}
 ENV CRYPTOGRAPHY_DONT_BUILD_RUST=1
-RUN python -m pip install -U pip && pip3 install poetry
+RUN pip3 install poetry
 RUN poetry config virtualenvs.create false
 RUN poetry install --no-dev
 
