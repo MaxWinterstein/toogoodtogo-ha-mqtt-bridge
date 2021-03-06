@@ -1,4 +1,6 @@
 {
   "timezone": "Europe/Berlin",
-  "locale": "en_us"
+  "locale": "en_us",
+  "cleanup": true,
+  "data_dir": "./data"
 }

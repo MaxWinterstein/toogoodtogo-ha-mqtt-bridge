@@ -38,10 +38,14 @@ Create some settings file called `settings.local.json`:
 
 `locale` (optional) to format pickup times like _in 2 hours_. E.g. `de` for german, `en_us` for american english.
 
-And start with the mounted settings file, e.g. for Mac OS:
+`cleanup` (optional) remove items from Home Assistant if they are no longer in the fetched result.
+
+`data_dir` (optional) folder to store persistent data. Needed e.g. for `cleanup` feature.
+
+And start with the mounted settings file, e.g. for macOS:
 
 ```bash
-docker run --rm -ti -v $PWD/settings.local.json:/app/settings.local.json maxwinterstein/toogoodtogo-ha-mqtt-bridge
+docker run --rm -ti -v $PWD/settings.local.json:/app/settings.local.json -v $PWD/data/:/data maxwinterstein/toogoodtogo-ha-mqtt-bridge
 ```
 
 ## Attributes

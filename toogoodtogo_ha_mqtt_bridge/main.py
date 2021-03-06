@@ -2,6 +2,7 @@ import json
 import logging
 import os
 import threading
+from pathlib import Path
 from time import sleep
 
 import arrow
@@ -99,7 +100,35 @@ def check():
             logger.warning("Seems like some message was not transferred successfully.")
             return False
 
+    if settings.get("cleanup"):
+        check_for_removed_stores(shops)
+
     return True
+
+
+def check_for_removed_stores(shops: []):
+    path = settings.get("data_dir") + "/known_shops.json"
+
+    checked_items = [shop["item"]["item_id"] for shop in shops]
+
+    if os.path.isfile(path):
+        logger.debug(f"known_shops.json exists at {path}")
+        try:
+            known_items = json.load(open(path, "r"))
+        except:
+            logger.error("Error happened when reading known_shops file")
+            return
+
+        deprecated_items = [x for x in known_items if x not in checked_items]
+        for deprecated_item in deprecated_items:
+            logger.info(f"Shop {deprecated_item} was not checked, will send remove message")
+            result = mqtt_client.publish(f"homeassistant/sensor/toogoodtogo_{deprecated_item}/config")
+            logger.debug(f"Message published: Removal: {bool(result.rc == mqtt.MQTT_ERR_SUCCESS)}")
+
+    Path(settings.get("data_dir")).mkdir(parents=True, exist_ok=True)
+    json.dump(checked_items, open(path, "w"))
+
+    pass
 
 
 def loop(event):
