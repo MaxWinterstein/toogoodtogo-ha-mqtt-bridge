@@ -1,5 +1,7 @@
 # TooGoodToGoo Home Assistant Mqtt Bridge
 
+<a href="https://www.buymeacoffee.com/MaxWinterstein" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" height="41" width="174"></a>
+
 Small python tool to forward stock of you favourite stores to Home Assistant via MQTT.
 
 Stores are automatically created via MQTT Discovery and contain some addition attributes like price and more.
