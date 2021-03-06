@@ -15,4 +15,3 @@ RUN pip3 install poetry && \
     poetry install --no-dev
 ENV DYNACONF_DATA_DIR=/data
 CMD ["python", "main.py"]
->>>>>>> Add cleanup function
