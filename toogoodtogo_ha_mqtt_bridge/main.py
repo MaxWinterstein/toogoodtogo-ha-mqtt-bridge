@@ -75,7 +75,17 @@ def check():
         pickup_end_human = (
             "Unknown" if stock == 0 else pickup_end_date.humanize(only_distance=False, locale=settings.locale)
         )
-        picture = shop["store"]["logo_picture"]["current_url"]
+
+        # get company logo
+        try:
+            picture = shop["store"]["logo_picture"]["current_url"]  # this location fits for the most
+        except KeyError:
+            try:
+                picture = shop["item"]["logo_picture"]["current_url"]  # fits some longer existing ones
+            except KeyError:
+                # okay, i give up. Take TGTG brand logo.
+                picture = "https://toogoodtogo.com/images/logo/econ-textless.svg"
+
         result_attrs = mqtt_client.publish(
             f"homeassistant/sensor/toogoodtogo_{item_id}/attr",
             json.dumps(
