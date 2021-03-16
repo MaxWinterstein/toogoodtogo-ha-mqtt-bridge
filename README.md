@@ -16,7 +16,7 @@ Easiest way is to use the Home Assistant Add-on. I created one in [my Home Assis
 
 Docker image is created automatically and available at dockerhub: [maxwinterstein/toogoodtogo-ha-mqtt-bridge](https://hub.docker.com/r/maxwinterstein/toogoodtogo-ha-mqtt-bridge)
 
-Create some settings file called `settings.local.json`:
+Create some settings file called `settings.local.json` (see [`settings.example.json`](https://github.com/MaxWinterstein/toogoodtogo-ha-mqtt-bridge/blob/main/toogoodtogo_ha_mqtt_bridge/settings.example.json)):
 
 ```json
 {
@@ -26,11 +26,13 @@ Create some settings file called `settings.local.json`:
     "username": "mqtt",
     "password": "mqtt"
   },
-  "toogoodtogo": {
+  "tgtg": {
     "email": "me@example.ocm",
     "password": "iliketurtles",
-    "every_n_minutes": 5
-  }
+    "every_n_minutes": 10
+  },
+  "timezone": "Europe/Berlin",
+  "locale": "en_us"
 }
 ```
 
