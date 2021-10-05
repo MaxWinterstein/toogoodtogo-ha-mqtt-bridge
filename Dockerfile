@@ -10,7 +10,7 @@ WORKDIR /app
 ENV PYTHONPATH=${PYTHONPATH}:${PWD}
 ENV CRYPTOGRAPHY_DONT_BUILD_RUST=1
 
-RUN pip3 install poetry && \
+RUN pip3 install poetry cryptography==3.3.2 && \
     poetry config virtualenvs.create false && \
     poetry install --no-dev
 ENV DYNACONF_DATA_DIR=/data
