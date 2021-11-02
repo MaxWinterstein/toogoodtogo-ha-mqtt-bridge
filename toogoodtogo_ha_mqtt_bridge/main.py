@@ -59,7 +59,16 @@ def check():
         )
 
         # prepare attrs
-        price = shop["item"]["price"]["minor_units"] / pow(10, shop["item"]["price"]["decimals"])
+        if shop["item"].get("price"):
+            price = shop["item"]["price"]["minor_units"] / pow(10, shop["item"]["price"]["decimals"])
+        elif shop["item"].get("price_including_taxes"):
+            price = shop["item"]["price_including_taxes"]["minor_units"] / pow(
+                10, shop["item"]["price_including_taxes"]["decimals"]
+            )
+        else:
+            logger.error("Can't find price")
+            price = 0
+
         pickup_start_date = (
             None if not stock else arrow.get(shop["pickup_interval"]["start"]).to(tz=settings.timezone)
         )
