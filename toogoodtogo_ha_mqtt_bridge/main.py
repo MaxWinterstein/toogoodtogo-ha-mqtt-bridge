@@ -18,18 +18,19 @@ from watchdog import Watchdog
 logger = logging.getLogger(__name__)
 coloredlogs.install(level="DEBUG", logger=logger)
 
-
 mqtt_client = None
-tgtg_client = TgtgClient(
-    email=settings.tgtg.email,
-    password=settings.tgtg.password,
-    timeout=30,
-    user_agent="TooGoodToGo/21.6.2 (813) (iPhone/iPhone 7 (GSM); iOS 13.7; Scale/2.00)",
-)
+first_run = True
+tgtg_client = TgtgClient(email=settings.tgtg.email, password=settings.tgtg.password, timeout=30)
 watchdog: Watchdog = None
 
 
 def check():
+    global first_run
+    if not first_run:
+        tgtg_client.login()
+        write_token_file()
+
+    first_run = False
     shops = tgtg_client.get_items(page_size=400)
     for shop in shops:
         stock = shop["items_available"]
@@ -126,6 +127,49 @@ def check():
     return True
 
 
+def write_token_file():
+    tokens = {
+        "access_token": tgtg_client.access_token,
+        "access_token_lifetime": tgtg_client.access_token_lifetime,
+        "refresh_token": tgtg_client.refresh_token,
+        "user_id": tgtg_client.user_id,
+        "last_time_token_refreshed": str(tgtg_client.last_time_token_refreshed),
+    }
+
+    with open("tokens.json", "w") as json_file:
+        json.dump(tokens, json_file)
+
+    logger.debug("Written tokens.json file to filesystem")
+
+
+def check_existing_token_file():
+    if os.path.isfile("tokens.json"):
+        read_token_file()
+        return True
+    else:
+        logger.debug("Logging in with credentials")
+        return False
+
+
+def read_token_file():
+    with open("tokens.json") as f:
+        tokens = json.load(f)
+
+    if tokens:
+        logger.debug("Loaded tokens form tokenfile. Logging in with tokens.")
+        rebuild_tgtg_client(tokens)
+
+
+def rebuild_tgtg_client(tokens):
+    global tgtg_client
+    tgtg_client = TgtgClient(
+        access_token=tokens["access_token"],
+        refresh_token=tokens["refresh_token"],
+        user_id=tokens["user_id"],
+        timeout=30,
+    )
+
+
 def check_for_removed_stores(shops: []):
     path = settings.get("data_dir") + "/known_shops.json"
 
@@ -153,6 +197,12 @@ def check_for_removed_stores(shops: []):
 
 def loop(event):
     logger.info("Starting loop")
+
+    token_exits = check_existing_token_file()
+    tgtg_client.login()
+    if not token_exits and tgtg_client.access_token:
+        write_token_file()
+
     while True:
         logger.debug("Loop run started")
         if not check():
@@ -178,7 +228,6 @@ def on_disconnect(client, userdata, rc):
 
 
 def start():
-
     global watchdog, mqtt_client
     watchdog = Watchdog(
         timeout=settings.tgtg.every_n_minutes * 60 * 3 + 30,  # 3 pull intervals + 1 timeout
