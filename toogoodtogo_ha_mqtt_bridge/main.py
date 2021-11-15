@@ -19,11 +19,7 @@ logger = logging.getLogger(__name__)
 coloredlogs.install(level="DEBUG", logger=logger)
 
 mqtt_client = None
-tgtg_client = TgtgClient(
-    email=settings.tgtg.email,
-    password=settings.tgtg.password,
-    timeout=30
-)
+tgtg_client = TgtgClient(email=settings.tgtg.email, password=settings.tgtg.password, timeout=30)
 watchdog: Watchdog = None
 
 
@@ -130,12 +126,14 @@ def check():
 
 
 def write_token_file():
-    tokens = {"access_token": tgtg_client.access_token,
-              "access_token_lifetime": tgtg_client.access_token_lifetime,
-              "refresh_token": tgtg_client.refresh_token,
-              "user_id": tgtg_client.user_id}
+    tokens = {
+        "access_token": tgtg_client.access_token,
+        "access_token_lifetime": tgtg_client.access_token_lifetime,
+        "refresh_token": tgtg_client.refresh_token,
+        "user_id": tgtg_client.user_id,
+    }
 
-    with open('tokens.json', 'w') as json_file:
+    with open("tokens.json", "w") as json_file:
         json.dump(tokens, json_file)
 
 
@@ -161,7 +159,7 @@ def rebuild_tgtg_client(tokens):
         access_token=tokens["access_token"],
         refresh_token=tokens["refresh_token"],
         user_id=tokens["user_id"],
-        timeout=30
+        timeout=30,
     )
 
 
