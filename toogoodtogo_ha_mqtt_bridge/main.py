@@ -138,12 +138,15 @@ def write_token_file():
     with open('tokens.json', 'w') as json_file:
         json.dump(tokens, json_file)
 
+    logger.debug("Written tokens.json file to filesystem")
+
 
 def check_existing_token_file():
     if os.path.isfile("tokens.json"):
         read_token_file()
         return True
     else:
+        logger.debug("Logging in with credentials")
         return False
 
 
@@ -152,6 +155,7 @@ def read_token_file():
         tokens = json.load(f)
 
     if tokens:
+        logger.debug("Loaded tokens form tokenfile. Logging in with tokens.")
         rebuild_tgtg_client(tokens)
 
 
