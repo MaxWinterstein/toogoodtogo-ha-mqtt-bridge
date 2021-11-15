@@ -22,8 +22,7 @@ mqtt_client = None
 tgtg_client = TgtgClient(
     email=settings.tgtg.email,
     password=settings.tgtg.password,
-    timeout=30,
-    user_agent="TooGoodToGo/21.6.2 (813) (iPhone/iPhone 7 (GSM); iOS 13.7; Scale/2.00)",
+    timeout=30
 )
 watchdog: Watchdog = None
 
@@ -162,8 +161,7 @@ def rebuild_tgtg_client(tokens):
         access_token=tokens["access_token"],
         refresh_token=tokens["refresh_token"],
         user_id=tokens["user_id"],
-        timeout=30,
-        user_agent="TooGoodToGo/21.6.2 (813) (iPhone/iPhone 7 (GSM); iOS 13.7; Scale/2.00)",
+        timeout=30
     )
 
 
