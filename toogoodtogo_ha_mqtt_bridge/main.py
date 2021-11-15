@@ -132,7 +132,7 @@ def write_token_file():
         "access_token_lifetime": tgtg_client.access_token_lifetime,
         "refresh_token": tgtg_client.refresh_token,
         "user_id": tgtg_client.user_id,
-        "last_time_token_refreshed": str(tgtg_client.last_time_token_refreshed)
+        "last_time_token_refreshed": str(tgtg_client.last_time_token_refreshed),
     }
 
     with open("tokens.json", "w") as json_file:
