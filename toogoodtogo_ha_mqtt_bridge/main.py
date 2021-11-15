@@ -19,13 +19,18 @@ logger = logging.getLogger(__name__)
 coloredlogs.install(level="DEBUG", logger=logger)
 
 mqtt_client = None
+first_run = True
 tgtg_client = TgtgClient(email=settings.tgtg.email, password=settings.tgtg.password, timeout=30)
 watchdog: Watchdog = None
 
 
 def check():
+    global first_run
+    if not first_run:
+        write_token_file()
+
+    first_run = False
     shops = tgtg_client.get_items(page_size=400)
-    write_token_file()
     for shop in shops:
         stock = shop["items_available"]
         item_id = shop["item"]["item_id"]
