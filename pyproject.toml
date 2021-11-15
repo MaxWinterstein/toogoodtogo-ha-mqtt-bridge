@@ -6,7 +6,7 @@ profile = "black"
 
 [tool.poetry]
 name = "toogoodtogo-ha-mqtt-bridge"
-version = "0.1.1"
+version = "1.8.0"
 description = ""
 authors = ["Max Winterstein <github@winterstein.mx>"]
 
