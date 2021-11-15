@@ -27,6 +27,7 @@ watchdog: Watchdog = None
 def check():
     global first_run
     if not first_run:
+        tgtg_client.login()
         write_token_file()
 
     first_run = False
