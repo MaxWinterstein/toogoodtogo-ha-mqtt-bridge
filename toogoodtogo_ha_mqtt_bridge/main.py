@@ -24,11 +24,6 @@ watchdog: Watchdog = None
 
 
 def check():
-    token_exits = check_existing_token_file()
-    tgtg_client.login()
-    if not token_exits and tgtg_client.access_token:
-        write_token_file()
-
     shops = tgtg_client.get_items(page_size=400)
     for shop in shops:
         stock = shop["items_available"]
@@ -194,6 +189,12 @@ def check_for_removed_stores(shops: []):
 
 def loop(event):
     logger.info("Starting loop")
+
+    token_exits = check_existing_token_file()
+    tgtg_client.login()
+    if not token_exits and tgtg_client.access_token:
+        write_token_file()
+
     while True:
         logger.debug("Loop run started")
         if not check():
