@@ -25,6 +25,7 @@ watchdog: Watchdog = None
 
 def check():
     shops = tgtg_client.get_items(page_size=400)
+    write_token_file()
     for shop in shops:
         stock = shop["items_available"]
         item_id = shop["item"]["item_id"]
@@ -126,6 +127,7 @@ def write_token_file():
         "access_token_lifetime": tgtg_client.access_token_lifetime,
         "refresh_token": tgtg_client.refresh_token,
         "user_id": tgtg_client.user_id,
+        "last_time_token_refreshed": str(tgtg_client.last_time_token_refreshed)
     }
 
     with open("tokens.json", "w") as json_file:
