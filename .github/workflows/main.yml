@@ -31,3 +31,4 @@ jobs:
           push: true
           tags: |
             maxwinterstein/toogoodtogo-ha-mqtt-bridge:${{ github.event.inputs.version }}
+            maxwinterstein/toogoodtogo-ha-mqtt-bridge:latest
