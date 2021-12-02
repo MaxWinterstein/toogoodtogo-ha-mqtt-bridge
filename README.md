@@ -28,7 +28,6 @@ Create some settings file called `settings.local.json` (see [`settings.example.j
   },
   "tgtg": {
     "email": "me@example.ocm",
-    "password": "iliketurtles",
     "every_n_minutes": 10
   },
   "timezone": "Europe/Berlin",
