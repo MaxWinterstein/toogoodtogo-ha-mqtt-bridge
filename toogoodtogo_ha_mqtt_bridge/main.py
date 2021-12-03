@@ -14,7 +14,9 @@ from tgtg import TgtgClient
 from watchdog import Watchdog
 
 logger = logging.getLogger(__name__)
-coloredlogs.install(level="DEBUG", logger=logger)  # pretty logging is pretty
+coloredlogs.install(
+    level="DEBUG", logger=logger, fmt="%(asctime)s [%(levelname)s] %(message)s"
+)  # pretty logging is pretty
 
 mqtt_client = None
 first_run = True
