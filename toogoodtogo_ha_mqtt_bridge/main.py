@@ -11,12 +11,10 @@ import paho.mqtt.client as mqtt
 import watchdog
 from config import settings
 from tgtg import TgtgClient
-
-# pretty logging is pretty
 from watchdog import Watchdog
 
 logger = logging.getLogger(__name__)
-coloredlogs.install(level="DEBUG", logger=logger)
+coloredlogs.install(level="DEBUG", logger=logger)  # pretty logging is pretty
 
 mqtt_client = None
 first_run = True
@@ -136,14 +134,14 @@ def write_token_file():
         "last_time_token_refreshed": str(tgtg_client.last_time_token_refreshed),
     }
 
-    with open("tokens.json", "w") as json_file:
+    with open(settings.get("data_dir") + "/tokens.json", "w") as json_file:
         json.dump(tokens, json_file)
 
     logger.debug("Written tokens.json file to filesystem")
 
 
 def check_existing_token_file():
-    if os.path.isfile("tokens.json"):
+    if os.path.isfile(settings.get("data_dir") + "/tokens.json"):
         read_token_file()
         return True
     else:
@@ -152,7 +150,7 @@ def check_existing_token_file():
 
 
 def read_token_file():
-    with open("tokens.json") as f:
+    with open(settings.get("data_dir") + "/tokens.json") as f:
         tokens = json.load(f)
 
     if tokens:
