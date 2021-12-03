@@ -7,6 +7,7 @@
   },
   "tgtg": {
     "email": "me@example.ocm",
+    "language": "en-US",
     "every_n_minutes": 10
   },
   "timezone": "Europe/Berlin",
