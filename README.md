@@ -32,7 +32,8 @@ Create some settings file called `settings.local.json` (see [`settings.example.j
     "every_n_minutes": 10
   },
   "timezone": "Europe/Berlin",
-  "locale": "en_us"
+  "locale": "en_us",
+  "data_dir": "data"
 }
 ```
 
@@ -44,7 +45,7 @@ Create some settings file called `settings.local.json` (see [`settings.example.j
 
 `cleanup` (optional) remove items from Home Assistant if they are no longer in the fetched result.
 
-`data_dir` (optional) folder to store persistent data. Needed e.g. for `cleanup` feature.
+`data_dir` folder to store persistent data. Needed e.g. for `cleanup` feature.
 
 And start with the mounted settings file, e.g. for macOS:
 
