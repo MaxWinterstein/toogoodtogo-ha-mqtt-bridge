@@ -48,7 +48,7 @@ Create some settings file called `settings.local.json` (see [`settings.example.j
 And start with the mounted settings file, e.g. for macOS:
 
 ```bash
-docker run --rm -ti -v $PWD/settings.local.json:/app/settings.local.json -v $PWD/data/:/data maxwinterstein/toogoodtogo-ha-mqtt-bridge
+docker run --rm -ti --pull always -v $PWD/settings.local.json:/app/settings.local.json -v $PWD/data/:/data maxwinterstein/toogoodtogo-ha-mqtt-bridge
 ```
 
 ## Attributes
