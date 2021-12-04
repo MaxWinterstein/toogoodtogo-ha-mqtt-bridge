@@ -46,6 +46,10 @@ Create some settings file called `settings.local.json` (see [`settings.example.j
 
 `data_dir` (optional) folder to store persistent data. Needed e.g. for `cleanup` feature.
 
+`poll_from` (optional) time to start polling tgtg bags.
+
+`poll_until` (optional) time to end polling tgtg bags.
+
 And start with the mounted settings file, e.g. for macOS:
 
 ```bash
