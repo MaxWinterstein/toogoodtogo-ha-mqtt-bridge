@@ -245,22 +245,22 @@ def send_waiting_state():
         with open(path, mode='r') as f:
             known_items = json.load(f)
 
-    for item_id in known_items:
-        mqtt_client.publish(
-            f"homeassistant/sensor/toogoodtogo_{item_id}/attr",
-            json.dumps(
-                {
-                    "price": 0,
-                    "stock_available": False,
-                    "url": f"http://share.toogoodtogo.com/item/{item_id}",
-                    "pickup_start": "Unkown",
-                    "pickup_start_human": "Unkown",
-                    "pickup_end": "Unkown",
-                    "pickup_end_human": "Unkown",
-                    "picture": "https://toogoodtogo.com/images/logo/econ-textless.svg",
-                }
-            ),
-        )
+        for item_id in known_items:
+            mqtt_client.publish(
+                f"homeassistant/sensor/toogoodtogo_{item_id}/attr",
+                json.dumps(
+                    {
+                        "price": 0,
+                        "stock_available": False,
+                        "url": f"http://share.toogoodtogo.com/item/{item_id}",
+                        "pickup_start": "Unkown",
+                        "pickup_start_human": "Unkown",
+                        "pickup_end": "Unkown",
+                        "pickup_end_human": "Unkown",
+                        "picture": "https://toogoodtogo.com/images/logo/econ-textless.svg",
+                    }
+                ),
+            )
 
 
 def watchdog_handler():
