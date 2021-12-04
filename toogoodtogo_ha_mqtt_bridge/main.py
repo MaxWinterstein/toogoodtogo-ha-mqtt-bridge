@@ -242,7 +242,7 @@ def send_waiting_state():
     path = settings.get("data_dir") + "/known_items.json"
 
     if os.path.isfile(path):
-        with open(path, mode='r') as f:
+        with open(path, mode="r") as f:
             known_items = json.load(f)
 
         for item_id in known_items:
