@@ -191,7 +191,6 @@ def check_for_removed_stores(shops: []):
             result = mqtt_client.publish(f"homeassistant/sensor/toogoodtogo_{deprecated_item}/config")
             logger.debug(f"Message published: Removal: {bool(result.rc == mqtt.MQTT_ERR_SUCCESS)}")
 
-    Path(settings.get("data_dir")).mkdir(parents=True, exist_ok=True)
     json.dump(checked_items, open(path, "w"))
 
     pass
@@ -215,7 +214,8 @@ def loop(event):
                 logger.debug("Loop run finished")
                 watchdog.reset()
         else:
-            logger.debug("No polling defined for the current time.\nLoop run finished")
+            send_waiting_state()
+            logger.debug("No polling defined for the current time. Loop run finished.")
         event.wait(settings.tgtg.every_n_minutes * 60)
 
 
@@ -236,6 +236,31 @@ def check_pollingtime():
         return True
     else:
         return False
+
+
+def send_waiting_state():
+    path = settings.get("data_dir") + "/known_items.json"
+
+    if os.path.isfile(path):
+        with open(path, mode='r') as f:
+            known_items = json.load(f)
+
+    for item_id in known_items:
+        mqtt_client.publish(
+            f"homeassistant/sensor/toogoodtogo_{item_id}/attr",
+            json.dumps(
+                {
+                    "price": 0,
+                    "stock_available": False,
+                    "url": f"http://share.toogoodtogo.com/item/{item_id}",
+                    "pickup_start": "Unkown",
+                    "pickup_start_human": "Unkown",
+                    "pickup_end": "Unkown",
+                    "pickup_end_human": "Unkown",
+                    "picture": "https://toogoodtogo.com/images/logo/econ-textless.svg",
+                }
+            ),
+        )
 
 
 def watchdog_handler():
