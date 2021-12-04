@@ -199,6 +199,7 @@ def check_for_removed_stores(shops: []):
 def loop(event):
     logger.info("Starting loop")
 
+    create_data_dir()
     token_exits = check_existing_token_file()
     tgtg_client.login()
     if not token_exits and tgtg_client.access_token:
@@ -212,6 +213,12 @@ def loop(event):
             logger.debug("Loop run finished")
             watchdog.reset()
         event.wait(settings.tgtg.every_n_minutes * 60)
+
+
+def create_data_dir():
+    data_dir = settings.get("data_dir")
+    if not os.path.isdir(data_dir):
+        os.mkdir(data_dir)
 
 
 def watchdog_handler():
