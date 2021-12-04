@@ -4,6 +4,7 @@ import os
 import threading
 from pathlib import Path
 from time import sleep
+from datetime import time, datetime
 
 import arrow
 import coloredlogs
@@ -207,11 +208,14 @@ def loop(event):
 
     while True:
         logger.debug("Loop run started")
-        if not check():
-            logger.error("Loop was not successfully.")
+        if check_pollingtime():
+            if not check():
+                logger.error("Loop was not successfully.")
+            else:
+                logger.debug("Loop run finished")
+                watchdog.reset()
         else:
             logger.debug("Loop run finished")
-            watchdog.reset()
         event.wait(settings.tgtg.every_n_minutes * 60)
 
 
@@ -219,6 +223,19 @@ def create_data_dir():
     data_dir = settings.get("data_dir")
     if not os.path.isdir(data_dir):
         os.mkdir(data_dir)
+
+
+def check_pollingtime():
+    splitted_start = settings.get("poll_from").split(':')
+    splitted_end = settings.get("poll_until").split(':')
+    start_time = time(int(splitted_start[0]), int(splitted_start[1]))
+    end_time = time(int(splitted_end[0]), int(splitted_end[1]))
+    now = datetime.now().time()
+
+    if start_time <= now <= end_time:
+        return True
+    else:
+        return False
 
 
 def watchdog_handler():
