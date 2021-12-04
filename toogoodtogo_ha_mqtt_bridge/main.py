@@ -215,7 +215,7 @@ def loop(event):
                 logger.debug("Loop run finished")
                 watchdog.reset()
         else:
-            logger.debug("Loop run finished")
+            logger.debug("No polling defined for the current time.\nLoop run finished")
         event.wait(settings.tgtg.every_n_minutes * 60)
 
 
