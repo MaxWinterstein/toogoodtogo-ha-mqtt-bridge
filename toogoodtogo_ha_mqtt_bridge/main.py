@@ -2,9 +2,9 @@ import json
 import logging
 import os
 import threading
+from datetime import datetime, time
 from pathlib import Path
 from time import sleep
-from datetime import time, datetime
 
 import arrow
 import coloredlogs
@@ -226,8 +226,8 @@ def create_data_dir():
 
 
 def check_pollingtime():
-    splitted_start = settings.get("poll_from").split(':')
-    splitted_end = settings.get("poll_until").split(':')
+    splitted_start = settings.get("poll_from").split(":")
+    splitted_end = settings.get("poll_until").split(":")
     start_time = time(int(splitted_start[0]), int(splitted_start[1]))
     end_time = time(int(splitted_end[0]), int(splitted_end[1]))
     now = datetime.now().time()
