@@ -29,14 +29,14 @@ Create some settings file called `settings.local.json` (see [`settings.example.j
   "tgtg": {
     "email": "me@example.ocm",
     "language": "en-US",
-    "every_n_minutes": 10
+    "polling_schedule": "*/10 * * * *"
   },
   "timezone": "Europe/Berlin",
   "locale": "en_us"
 }
 ```
 
-`every_n_minutes` sets the polling intervall. A value of e.g. 10 would fetch data every 10 minutes.
+`polling_schedule` sets the polling intervall in cron notation. For more Infomation have a look here: https://crontab.guru/
 
 `timezone` (optional) as TooGoodToGo provides its times as UTC we format it to local time. See [Wikipedia](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones) for valid values.
 
@@ -45,10 +45,6 @@ Create some settings file called `settings.local.json` (see [`settings.example.j
 `cleanup` (optional) remove items from Home Assistant if they are no longer in the fetched result.
 
 `data_dir` (optional) folder to store persistent data. Needed e.g. for `cleanup` feature.
-
-`poll_from` (optional) time to start polling tgtg bags.
-
-`poll_until` (optional) time to end polling tgtg bags.
 
 And start with the mounted settings file, e.g. for macOS:
 
