@@ -2,7 +2,5 @@
   "timezone": "Europe/Berlin",
   "locale": "en_us",
   "cleanup": true,
-  "data_dir": "./data",
-  "poll_from": "08:00",
-  "poll_until": "20:00"
+  "data_dir": "./data"
 }

@@ -2,17 +2,17 @@ import json
 import logging
 import os
 import threading
-from datetime import datetime, time
+from datetime import datetime
 from pathlib import Path
 from time import sleep
+from croniter import croniter
 
 import arrow
 import coloredlogs
 import paho.mqtt.client as mqtt
-import watchdog
+
 from config import settings
 from tgtg import TgtgClient
-from watchdog import Watchdog
 
 logger = logging.getLogger(__name__)
 coloredlogs.install(
@@ -22,7 +22,6 @@ coloredlogs.install(
 mqtt_client = None
 first_run = True
 tgtg_client = TgtgClient(email=settings.tgtg.email, language=settings.tgtg.language, timeout=30)
-watchdog: Watchdog = None
 
 
 def check():
@@ -207,66 +206,34 @@ def loop(event):
 
     while True:
         logger.debug("Loop run started")
-        if check_pollingtime():
-            if not check():
-                logger.error("Loop was not successfully.")
-            else:
-                logger.debug("Loop run finished")
-                watchdog.reset()
+        if not check():
+            logger.error("Loop was not successfully.")
         else:
-            send_waiting_state()
-            logger.debug("No polling defined for the current time. Loop run finished.")
-        event.wait(settings.tgtg.every_n_minutes * 60)
+            logger.debug("Loop run finished")
+
+        event.wait(calc_next_run())
+
+
+def calc_next_run():
+    cron = settings.tgtg.polling_schedule
+    now = datetime.now()
+
+    if croniter.is_valid(cron):
+        cron = croniter(cron, now)
+        next_run = cron.get_next(datetime)
+        sleep_seconds = (next_run - now).seconds
+
+        logger.debug("Next run at " + str(next_run))
+        return sleep_seconds
+    else:
+        logger.debug("Invalid cron schedule")
+        os._exit(1)
 
 
 def create_data_dir():
     data_dir = settings.get("data_dir")
     if not os.path.isdir(data_dir):
-        os.mkdir(data_dir)
-
-
-def check_pollingtime():
-    splitted_start = settings.get("poll_from").split(":")
-    splitted_end = settings.get("poll_until").split(":")
-    start_time = time(int(splitted_start[0]), int(splitted_start[1]))
-    end_time = time(int(splitted_end[0]), int(splitted_end[1]))
-    now = datetime.now().time()
-
-    if start_time <= now <= end_time:
-        return True
-    else:
-        return False
-
-
-def send_waiting_state():
-    path = settings.get("data_dir") + "/known_items.json"
-
-    if os.path.isfile(path):
-        with open(path, mode="r") as f:
-            known_items = json.load(f)
-
-        for item_id in known_items:
-            mqtt_client.publish(
-                f"homeassistant/sensor/toogoodtogo_{item_id}/attr",
-                json.dumps(
-                    {
-                        "price": 0,
-                        "stock_available": False,
-                        "url": f"http://share.toogoodtogo.com/item/{item_id}",
-                        "pickup_start": "Unkown",
-                        "pickup_start_human": "Unkown",
-                        "pickup_end": "Unkown",
-                        "pickup_end_human": "Unkown",
-                        "picture": "https://toogoodtogo.com/images/logo/econ-textless.svg",
-                    }
-                ),
-            )
-
-
-def watchdog_handler():
-    logger.error(f"Watchdog handler fired! No pull in the last {settings.tgtg.every_n_minutes} minutes!")
-
-    os._exit(1)  # easy way to die from within a thread
+        Path(data_dir).mkdir(parents=True)
 
 
 def on_disconnect(client, userdata, rc):
@@ -278,11 +245,7 @@ def on_disconnect(client, userdata, rc):
 
 
 def start():
-    global watchdog, mqtt_client
-    watchdog = Watchdog(
-        timeout=settings.tgtg.every_n_minutes * 60 * 3 + 30,  # 3 pull intervals + 1 timeout
-        user_handler=watchdog_handler,
-    )
+    global mqtt_client
 
     logger.info("Connecting mqtt")
     mqtt_client = mqtt.Client("toogoodtogo-ha-mqtt-bridge")
