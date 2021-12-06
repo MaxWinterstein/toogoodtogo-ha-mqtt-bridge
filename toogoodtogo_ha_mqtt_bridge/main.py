@@ -214,7 +214,13 @@ def loop(event):
 
 
 def calc_next_run():
-    cron = settings.tgtg.polling_schedule
+    tgtg = settings.get("tgtg")
+
+    if "polling_schedule" not in tgtg:
+        logger.debug("No polling_schedule found in settings")
+        os._exit(1)
+
+    cron = tgtg.polling_schedule
     now = datetime.now()
 
     if croniter.is_valid(cron):
