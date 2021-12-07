@@ -12,6 +12,7 @@ import paho.mqtt.client as mqtt
 from config import settings
 from croniter import croniter
 from tgtg import TgtgClient
+from watchdog import Watchdog
 
 logger = logging.getLogger(__name__)
 coloredlogs.install(
@@ -21,6 +22,8 @@ coloredlogs.install(
 mqtt_client = None
 first_run = True
 tgtg_client = TgtgClient(email=settings.tgtg.email, language=settings.tgtg.language, timeout=30)
+watchdog: Watchdog = None
+watchdog_timeout = 0
 
 
 def check():
@@ -209,6 +212,8 @@ def loop(event):
             logger.error("Loop was not successfully.")
         else:
             logger.debug("Loop run finished")
+            watchdog.timeout = calc_timeout()
+            watchdog.reset()
 
         event.wait(calc_next_run())
 
@@ -217,21 +222,21 @@ def calc_next_run():
     tgtg = settings.get("tgtg")
 
     if "polling_schedule" not in tgtg:
-        logger.debug("No polling_schedule found in settings")
+        logger.error("No polling_schedule found in settings")
         os._exit(1)
 
-    cron = tgtg.polling_schedule
+    cron_schedule = tgtg.polling_schedule
     now = datetime.now()
 
-    if croniter.is_valid(cron):
-        cron = croniter(cron, now)
+    if croniter.is_valid(cron_schedule):
+        cron = croniter(cron_schedule, now)
         next_run = cron.get_next(datetime)
         sleep_seconds = (next_run - now).seconds
 
         logger.debug("Next run at " + str(next_run))
         return sleep_seconds
     else:
-        logger.debug("Invalid cron schedule")
+        logger.error("Invalid cron schedule")
         os._exit(1)
 
 
@@ -239,6 +244,11 @@ def create_data_dir():
     data_dir = settings.get("data_dir")
     if not os.path.isdir(data_dir):
         Path(data_dir).mkdir(parents=True)
+
+
+def watchdog_handler():
+    logger.error(f"Watchdog handler fired! No pull in the last " + str(watchdog_timeout / 60) + " minutes!")
+    os._exit(1)
 
 
 def on_disconnect(client, userdata, rc):
@@ -249,8 +259,33 @@ def on_disconnect(client, userdata, rc):
         client.reconnect()
 
 
+def calc_timeout():
+    global watchdog_timeout
+    now = datetime.now()
+    tgtg = settings.get("tgtg")
+
+    if "polling_schedule" not in tgtg:
+        logger.error("No polling_schedule found in settings")
+        os._exit(1)
+
+    cron_schedule = tgtg.polling_schedule
+    if croniter.is_valid(cron_schedule):
+        next_run = croniter(cron_schedule, now).get_next(datetime)
+        for i in range(2):
+            next_run = croniter(cron_schedule, next_run).get_next(datetime)
+        watchdog_timeout = (next_run - now).seconds + 10  # Offset
+        return watchdog_timeout
+    else:
+        logger.error("Invalid cron schedule")
+        os._exit(1)
+
+
 def start():
-    global mqtt_client
+    global watchdog, mqtt_client
+    watchdog = Watchdog(
+        timeout=calc_timeout(),
+        user_handler=watchdog_handler,
+    )
 
     logger.info("Connecting mqtt")
     mqtt_client = mqtt.Client("toogoodtogo-ha-mqtt-bridge")
