@@ -206,6 +206,7 @@ def loop(event):
     if not token_exits and tgtg_client.access_token:
         write_token_file()
 
+    event.wait(calc_next_run())
     while True:
         logger.debug("Loop run started")
         if not check():
