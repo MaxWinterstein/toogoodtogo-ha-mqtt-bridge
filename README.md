@@ -70,6 +70,7 @@ sensor:
 ## Get a list of all toogoodtogo sensors:
 
 Add the following piece of code into /developer-tools/template in HomeAssistant. (Remove the last comma)
+
 ```yaml
 {%- for state in states -%}
     {%- if (state.entity_id.startswith('sensor.toogoodtogo_'))-%}
@@ -79,16 +80,18 @@ Add the following piece of code into /developer-tools/template in HomeAssistant.
 ```
 
 ## Example HomeAssistant Automation
+
 ```yaml
 alias: TooGoodToGo Notification
-description: 'Sends a notification when a toogoodtogo offer becomes available'
+description: "Sends a notification when a toogoodtogo offer becomes available"
 trigger:
   - platform: state
-    entity_id: >- # This is your list of toogoodoto sensors which are generated (Copy paste the list from above)
+    entity_id:
+      >- # This is your list of toogoodoto sensors which are generated (Copy paste the list from above)
       sensor.toogoodtogo_1,sensor.toogoodtogo_2,sensor.toogoodtogo_3
     attribute: stock_available
     from: false
-    to: 'true'
+    to: "true"
 condition: []
 action:
   # Example Android notification
@@ -98,10 +101,10 @@ action:
         Available: {{trigger.to_state.state}}, For:
         {{trigger.to_state.attributes.price}} in
         {{trigger.to_state.attributes.pickup_start_human}}
-      title: '{{trigger.to_state.attributes.friendly_name}}'
+      title: "{{trigger.to_state.attributes.friendly_name}}"
       data:
-        clickAction: '{{trigger.to_state.attributes.url}}'
-        image: '{{trigger.to_state.attributes.picture}}'
+        clickAction: "{{trigger.to_state.attributes.url}}"
+        image: "{{trigger.to_state.attributes.picture}}"
   # Example IOS notification
   - service: notify.mobile_app_iphone
     data:
@@ -109,10 +112,10 @@ action:
         Available: {{trigger.to_state.state}}, For:
         {{trigger.to_state.attributes.price}} in
         {{trigger.to_state.attributes.pickup_start_human}}
-      title: '{{trigger.to_state.attributes.friendly_name}}'
+      title: "{{trigger.to_state.attributes.friendly_name}}"
       data:
-        url: '{{trigger.to_state.attributes.url}}'
-        image: '{{trigger.to_state.attributes.picture}}'
+        url: "{{trigger.to_state.attributes.url}}"
+        image: "{{trigger.to_state.attributes.picture}}"
 mode: parallel
 max: 10
 ```
