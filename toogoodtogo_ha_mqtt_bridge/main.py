@@ -4,7 +4,6 @@ import os
 import random
 import threading
 from datetime import datetime, timedelta
-from operator import add, sub
 from pathlib import Path
 from time import sleep
 
