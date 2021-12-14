@@ -250,10 +250,8 @@ def calc_next_run():
 
 
 def randomize_time(sleep_seconds):
-    subtract_val = sleep_seconds / 2
-    ops = (add, sub)
-    op = random.choice(ops)
-    return op(sleep_seconds - subtract_val, sleep_seconds)
+    offset_val = sleep_seconds / 2
+    return random.randint(sleep_seconds - offset_val, sleep_seconds)
 
 
 def create_data_dir():
