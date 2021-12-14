@@ -237,12 +237,10 @@ def calc_next_run():
 
         if settings.get("randomize_calls"):
             random_sleep = randomize_time(sleep_seconds)
-            if random_sleep > sleep_seconds / 2:
-                logger.debug("Random sleep used")
+            if random_sleep > sleep_seconds / 2 and random_sleep > 10:
                 next_run = next_run + timedelta(seconds=random_sleep)
                 sleep_seconds = (next_run - now).seconds
 
-        logger.debug("Waiting " + str(sleep_seconds) + " seconds")
         logger.debug("Next run at " + str(next_run))
         return sleep_seconds
     else:
