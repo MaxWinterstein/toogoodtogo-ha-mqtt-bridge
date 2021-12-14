@@ -297,7 +297,6 @@ def calc_timeout():
 
 
 def start():
-    calc_next_run()
     global watchdog, mqtt_client
     watchdog = Watchdog(
         timeout=calc_timeout(),
