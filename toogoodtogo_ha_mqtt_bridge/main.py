@@ -2,10 +2,12 @@ import json
 import logging
 import os
 import threading
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from time import sleep
+from operator import add, sub
 
+import random
 import arrow
 import coloredlogs
 import paho.mqtt.client as mqtt
@@ -234,11 +236,24 @@ def calc_next_run():
         next_run = cron.get_next(datetime)
         sleep_seconds = (next_run - now).seconds
 
+        if settings.get("randomize_calls"):
+            random_sleep = randomize_time(sleep_seconds)
+            if random_sleep > sleep_seconds / 2:
+                sleep_seconds = random_sleep
+                next_run = next_run + timedelta(seconds=random_sleep)
+
         logger.debug("Next run at " + str(next_run))
         return sleep_seconds
     else:
         logger.error("Invalid cron schedule")
         os._exit(1)
+
+
+def randomize_time(sleep_seconds):
+    subtract_val = sleep_seconds / 2
+    ops = (add, sub)
+    op = random.choice(ops)
+    return op(sleep_seconds - subtract_val, sleep_seconds)
 
 
 def create_data_dir():
@@ -282,6 +297,7 @@ def calc_timeout():
 
 
 def start():
+    calc_next_run()
     global watchdog, mqtt_client
     watchdog = Watchdog(
         timeout=calc_timeout(),
