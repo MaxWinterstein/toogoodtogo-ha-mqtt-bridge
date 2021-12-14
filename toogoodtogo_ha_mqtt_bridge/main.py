@@ -251,6 +251,10 @@ def calc_next_run():
 
 def randomize_time(sleep_seconds):
     offset_val = sleep_seconds / 2
+
+    if offset_val < 1:
+        return sleep_seconds
+
     return random.randint(sleep_seconds - offset_val, sleep_seconds)
 
 
