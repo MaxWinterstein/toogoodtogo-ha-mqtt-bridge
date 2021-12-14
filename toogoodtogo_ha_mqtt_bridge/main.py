@@ -255,7 +255,7 @@ def randomize_time(sleep_seconds):
     if offset_val < 1:
         return sleep_seconds
 
-    return random.randint(sleep_seconds - offset_val, sleep_seconds)
+    return random.randint(sleep_seconds - int(offset_val), sleep_seconds)
 
 
 def create_data_dir():
