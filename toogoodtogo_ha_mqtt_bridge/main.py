@@ -291,7 +291,7 @@ def calc_timeout():
         next_run = croniter(cron_schedule, now).get_next(datetime)
         for i in range(2):
             next_run = croniter(cron_schedule, next_run).get_next(datetime)
-        watchdog_timeout = (next_run - now).seconds + 10  # Offset
+        watchdog_timeout = (next_run - now).seconds + tgtg_client.timeout
         return watchdog_timeout
     else:
         exit_from_thread("Invalid cron schedule", 1)
