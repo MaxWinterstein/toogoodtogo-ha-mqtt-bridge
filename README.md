@@ -82,6 +82,7 @@ Add the following piece of code into /developer-tools/template in HomeAssistant.
 ## Example HomeAssistant Automation
 
 ### Notification
+
 ```yaml
 alias: TooGoodToGo Notification
 description: "Sends a notification when a toogoodtogo offer becomes available"
@@ -101,12 +102,12 @@ action:
         Available: {{trigger.to_state.state}}, For:
         {{trigger.to_state.attributes.price}} in
         {{trigger.to_state.attributes.pickup_start_human}}
-      title: '{{trigger.to_state.attributes.friendly_name}}'
+      title: "{{trigger.to_state.attributes.friendly_name}}"
       data:
-        clickAction: '{{trigger.to_state.attributes.url}}'
-        image: '{{trigger.to_state.attributes.picture}}'
+        clickAction: "{{trigger.to_state.attributes.url}}"
+        image: "{{trigger.to_state.attributes.picture}}"
         group: tgtg
-        tag: '{{trigger.entity_id}}'
+        tag: "{{trigger.entity_id}}"
   - service: notify.mobile_app_iphone
     data:
       message: >-
@@ -114,20 +115,21 @@ action:
         {{trigger.to_state.attributes.price}} in
         {{trigger.to_state.attributes.pickup_start_human}},
         {{trigger.to_state.attributes.friendly_name}}
-      title: '{{trigger.to_state.attributes.friendly_name}}'
+      title: "{{trigger.to_state.attributes.friendly_name}}"
       data:
-        url: '{{trigger.to_state.attributes.url}}'
-        image: '{{trigger.to_state.attributes.picture}}'
+        url: "{{trigger.to_state.attributes.url}}"
+        image: "{{trigger.to_state.attributes.picture}}"
         group: tgtg
-        tag: '{{trigger.entity_id}}'
+        tag: "{{trigger.entity_id}}"
 mode: parallel
 max: 10
 ```
 
 ### Remove Notification
+
 ```yaml
 alias: TooGoodToGo UnNotification
-description: ''
+description: ""
 trigger:
   - platform: state
     entity_id:
@@ -142,12 +144,12 @@ action:
     data:
       message: clear_notification
       data:
-        tag: '{{trigger.entity_id}}'
+        tag: "{{trigger.entity_id}}"
   - service: notify.mobile_app_iphone
     data:
       message: clear_notification
       data:
-        tag: '{{trigger.entity_id}}'
+        tag: "{{trigger.entity_id}}"
 mode: parallel
 max: 10
 ```
