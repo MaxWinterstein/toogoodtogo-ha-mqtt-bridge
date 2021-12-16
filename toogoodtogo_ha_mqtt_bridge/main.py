@@ -234,11 +234,12 @@ def calc_next_run():
         next_run = cron.get_next(datetime)
         sleep_seconds = (next_run - now).seconds
 
-        if settings.get("randomize_calls"):
-            random_sleep = randomize_time(sleep_seconds)
-            if random_sleep > 30:
-                next_run = next_run + timedelta(seconds=random_sleep)
-                sleep_seconds = (next_run - now).seconds
+        if sleep_seconds > 30:
+            if settings.get("randomize_calls"):
+                random_sleep = randomize_time(sleep_seconds)
+                if random_sleep > 30:
+                    next_run = next_run + timedelta(seconds=random_sleep)
+                    sleep_seconds = (next_run - now).seconds
 
         logger.debug("Next run at " + str(next_run))
         return sleep_seconds
