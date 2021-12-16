@@ -236,7 +236,7 @@ def calc_next_run():
 
         if settings.get("randomize_calls"):
             random_sleep = randomize_time(sleep_seconds)
-            if random_sleep > sleep_seconds / 2 and random_sleep > 10:
+            if random_sleep > 60:
                 next_run = next_run + timedelta(seconds=random_sleep)
                 sleep_seconds = (next_run - now).seconds
 
@@ -300,6 +300,7 @@ def calc_timeout():
 
 
 def start():
+    calc_next_run()
     global watchdog, mqtt_client
     watchdog = Watchdog(
         timeout=calc_timeout(),
