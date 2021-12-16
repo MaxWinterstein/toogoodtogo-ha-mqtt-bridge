@@ -20,7 +20,9 @@ coloredlogs.install(
 
 mqtt_client = None
 first_run = True
-tgtg_client = TgtgClient(email=settings.tgtg.email, language=settings.tgtg.language, timeout=30)
+tgtg_client = TgtgClient(
+    email=settings.tgtg.email, language=settings.tgtg.get("language", "en-US"), timeout=30
+)
 watchdog: Watchdog = None
 
 
@@ -166,7 +168,7 @@ def rebuild_tgtg_client(tokens):
         access_token=tokens["access_token"],
         refresh_token=tokens["refresh_token"],
         user_id=tokens["user_id"],
-        language=settings.tgtg.language,
+        language=settings.tgtg.get("language", "en-US"),
         timeout=30,
     )
 
