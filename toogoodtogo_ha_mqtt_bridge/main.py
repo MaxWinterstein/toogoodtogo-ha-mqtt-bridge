@@ -287,7 +287,9 @@ def calc_timeout():
         exit_from_thread("No polling_schedule found in settings", 1)
 
     if croniter.is_valid(tgtg.polling_schedule):
+        # Get next run as base
         base = croniter(tgtg.polling_schedule, now).get_next(datetime)
+        # Get next two runs and calculate watchdog timeout
         itr = croniter(tgtg.polling_schedule, base)
         for _ in range(2):
             next_run = itr.get_next(datetime)
