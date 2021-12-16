@@ -234,15 +234,19 @@ def calc_next_run():
         next_run = cron.get_next(datetime)
         sleep_seconds = (next_run - now).seconds
 
-        if sleep_seconds > 30:
+        if sleep_seconds >= 30:
             if settings.get("randomize_calls"):
                 random_sleep = randomize_time(sleep_seconds)
                 if random_sleep > 30:
                     next_run = next_run + timedelta(seconds=random_sleep)
                     sleep_seconds = (next_run - now).seconds
+        elif sleep_seconds < 30:
+            # if sleep seconds < 30 skip next runtime
+            next_run = cron.get_next(datetime)
+            sleep_seconds = (next_run - now).seconds
 
         logger.debug("Next run at " + str(next_run))
-        return sleep_seconds
+        return sleep_seconds + 1
     else:
         exit_from_thread("Invalid cron schedule", 1)
 
