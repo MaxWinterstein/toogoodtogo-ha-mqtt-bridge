@@ -267,7 +267,9 @@ def exit_from_thread(message, return_code):
 
 
 def watchdog_handler():
-    exit_from_thread("Watchdog handler fired! No pull in the last " + str(watchdog_timeout / 60) + " minutes!", 1)
+    exit_from_thread(
+        "Watchdog handler fired! No pull in the last " + str(watchdog_timeout / 60) + " minutes!", 1
+    )
 
 
 def on_disconnect(client, userdata, rc):
