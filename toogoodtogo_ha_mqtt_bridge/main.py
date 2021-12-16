@@ -234,11 +234,12 @@ def calc_next_run():
         next_run = cron.get_next(datetime)
         sleep_seconds = (next_run - now).seconds
 
-        if settings.get("randomize_calls"):
-            random_sleep = randomize_time(sleep_seconds)
-            if random_sleep > sleep_seconds / 2 and random_sleep > 10:
-                next_run = next_run + timedelta(seconds=random_sleep)
-                sleep_seconds = (next_run - now).seconds
+        if sleep_seconds > 30:
+            if settings.get("randomize_calls"):
+                random_sleep = randomize_time(sleep_seconds)
+                if random_sleep > 30:
+                    next_run = next_run + timedelta(seconds=random_sleep)
+                    sleep_seconds = (next_run - now).seconds
 
         logger.debug("Next run at " + str(next_run))
         return sleep_seconds
@@ -267,7 +268,9 @@ def exit_from_thread(message, return_code):
 
 
 def watchdog_handler():
-    exit_from_thread("Watchdog handler fired! No pull in the last " + str(watchdog_timeout / 60) + " minutes!", 1)
+    exit_from_thread(
+        "Watchdog handler fired! No pull in the last " + str(watchdog_timeout / 60) + " minutes!", 1
+    )
 
 
 def on_disconnect(client, userdata, rc):
@@ -286,12 +289,14 @@ def calc_timeout():
     if "polling_schedule" not in tgtg:
         exit_from_thread("No polling_schedule found in settings", 1)
 
-    cron_schedule = tgtg.polling_schedule
-    if croniter.is_valid(cron_schedule):
-        next_run = croniter(cron_schedule, now).get_next(datetime)
-        for i in range(2):
-            next_run = croniter(cron_schedule, next_run).get_next(datetime)
-        watchdog_timeout = (next_run - now).seconds + 10  # Offset
+    if croniter.is_valid(tgtg.polling_schedule):
+        # Get next run as base
+        base = croniter(tgtg.polling_schedule, now).get_next(datetime)
+        # Get next two runs and calculate watchdog timeout
+        itr = croniter(tgtg.polling_schedule, base)
+        for _ in range(2):
+            next_run = itr.get_next(datetime)
+        watchdog_timeout = (next_run - now).seconds + tgtg_client.timeout
         return watchdog_timeout
     else:
         exit_from_thread("Invalid cron schedule", 1)
