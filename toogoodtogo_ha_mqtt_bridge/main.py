@@ -224,8 +224,7 @@ def calc_next_run():
     tgtg = settings.get("tgtg")
 
     if "polling_schedule" not in tgtg:
-        logger.error("No polling_schedule found in settings")
-        os._exit(1)
+        exit_from_thread("No polling_schedule found in settings", 1)
 
     cron_schedule = tgtg.polling_schedule
     now = datetime.now()
@@ -244,8 +243,7 @@ def calc_next_run():
         logger.debug("Next run at " + str(next_run))
         return sleep_seconds
     else:
-        logger.error("Invalid cron schedule")
-        os._exit(1)
+        exit_from_thread("Invalid cron schedule", 1)
 
 
 def randomize_time(sleep_seconds):
@@ -263,9 +261,13 @@ def create_data_dir():
         Path(data_dir).mkdir(parents=True)
 
 
+def exit_from_thread(message, return_code):
+    logger.exception(message)
+    os._exit(return_code)
+
+
 def watchdog_handler():
-    logger.error(f"Watchdog handler fired! No pull in the last " + str(watchdog_timeout / 60) + " minutes!")
-    os._exit(1)
+    exit_from_thread("Watchdog handler fired! No pull in the last " + str(watchdog_timeout / 60) + " minutes!", 1)
 
 
 def on_disconnect(client, userdata, rc):
@@ -282,8 +284,7 @@ def calc_timeout():
     tgtg = settings.get("tgtg")
 
     if "polling_schedule" not in tgtg:
-        logger.error("No polling_schedule found in settings")
-        os._exit(1)
+        exit_from_thread("No polling_schedule found in settings", 1)
 
     cron_schedule = tgtg.polling_schedule
     if croniter.is_valid(cron_schedule):
@@ -293,8 +294,7 @@ def calc_timeout():
         watchdog_timeout = (next_run - now).seconds + 10  # Offset
         return watchdog_timeout
     else:
-        logger.error("Invalid cron schedule")
-        os._exit(1)
+        exit_from_thread("Invalid cron schedule", 1)
 
 
 def start():
