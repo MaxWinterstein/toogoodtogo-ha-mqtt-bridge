@@ -286,11 +286,11 @@ def calc_timeout():
     if "polling_schedule" not in tgtg:
         exit_from_thread("No polling_schedule found in settings", 1)
 
-    cron_schedule = tgtg.polling_schedule
-    if croniter.is_valid(cron_schedule):
-        next_run = croniter(cron_schedule, now).get_next(datetime)
-        for i in range(2):
-            next_run = croniter(cron_schedule, next_run).get_next(datetime)
+    if croniter.is_valid(tgtg.polling_schedule):
+        base = croniter(tgtg.polling_schedule, now).get_next(datetime)
+        itr = croniter(tgtg.polling_schedule, base)
+        for _ in range(2):
+            next_run = itr.get_next(datetime)
         watchdog_timeout = (next_run - now).seconds + tgtg_client.timeout
         return watchdog_timeout
     else:
