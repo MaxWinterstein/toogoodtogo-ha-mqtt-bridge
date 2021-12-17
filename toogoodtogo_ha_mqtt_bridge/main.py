@@ -221,13 +221,7 @@ def loop(event):
 
 
 def calc_next_run():
-    tgtg = settings.get("tgtg")
-
-    if "polling_schedule" not in tgtg:
-        cron_schedule = get_fallback_cron(tgtg)
-    else:
-        cron_schedule = tgtg.polling_schedule
-
+    cron_schedule = get_cron_schedule()
     now = datetime.now()
 
     if croniter.is_valid(cron_schedule):
@@ -275,6 +269,14 @@ def randomize_time(sleep_seconds):
     return random.randint(sleep_seconds - int(offset_val), sleep_seconds)
 
 
+def get_cron_schedule():
+    tgtg = settings.get("tgtg")
+    if "polling_schedule" not in tgtg:
+        return get_fallback_cron(tgtg)
+    else:
+        return tgtg.polling_schedule
+
+
 def create_data_dir():
     data_dir = settings.get("data_dir")
     if not os.path.isdir(data_dir):
@@ -303,12 +305,7 @@ def on_disconnect(client, userdata, rc):
 def calc_timeout():
     global watchdog_timeout
     now = datetime.now()
-    tgtg = settings.get("tgtg")
-
-    if "polling_schedule" not in tgtg:
-        cron_schedule = get_fallback_cron(tgtg)
-    else:
-        cron_schedule = tgtg.polling_schedule
+    cron_schedule = get_cron_schedule()
 
     if croniter.is_valid(cron_schedule):
         # Get next run as base
