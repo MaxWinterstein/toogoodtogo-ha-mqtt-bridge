@@ -224,9 +224,10 @@ def calc_next_run():
     tgtg = settings.get("tgtg")
 
     if "polling_schedule" not in tgtg:
-        exit_from_thread("No polling_schedule found in settings", 1)
+        cron_schedule = get_fallback_cron(tgtg)
+    else:
+        cron_schedule = tgtg.polling_schedule
 
-    cron_schedule = tgtg.polling_schedule
     now = datetime.now()
 
     if croniter.is_valid(cron_schedule):
@@ -249,6 +250,19 @@ def calc_next_run():
         return sleep_seconds + 1
     else:
         exit_from_thread("Invalid cron schedule", 1)
+
+
+def get_fallback_cron(tgtg):
+    # Create fallback cron with old every_n_minutes setting
+    if "every_n_minutes" not in tgtg:
+        exit_from_thread("No interval found in settings, please check your config.", 1)
+
+    logger.warning("Deprecation waring! - The setting 'every_n_minutes' is not supported anymore. \n"
+                   "Please use cron schedule setting 'polling_schedule'. \n"
+                   "If you don't know what to do, have a look at here: "
+                   "https://github.com/MaxWinterstein/toogoodtogo-ha-mqtt-bridge")
+
+    return "*/" + tgtg.every_n_minutes + " * * * *"
 
 
 def randomize_time(sleep_seconds):
@@ -291,13 +305,15 @@ def calc_timeout():
     tgtg = settings.get("tgtg")
 
     if "polling_schedule" not in tgtg:
-        exit_from_thread("No polling_schedule found in settings", 1)
+        cron_schedule = get_fallback_cron(tgtg)
+    else:
+        cron_schedule = tgtg.polling_schedule
 
-    if croniter.is_valid(tgtg.polling_schedule):
+    if croniter.is_valid(cron_schedule):
         # Get next run as base
-        base = croniter(tgtg.polling_schedule, now).get_next(datetime)
+        base = croniter(cron_schedule, now).get_next(datetime)
         # Get next two runs and calculate watchdog timeout
-        itr = croniter(tgtg.polling_schedule, base)
+        itr = croniter(cron_schedule, base)
         for _ in range(2):
             next_run = itr.get_next(datetime)
         watchdog_timeout = (next_run - now).seconds + tgtg_client.timeout
