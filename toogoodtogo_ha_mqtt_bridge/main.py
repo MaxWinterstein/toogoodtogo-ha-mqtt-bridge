@@ -257,10 +257,11 @@ def get_fallback_cron(tgtg):
     if "every_n_minutes" not in tgtg:
         exit_from_thread("No interval found in settings, please check your config.", 1)
 
-    logger.warning("Deprecation waring! - The setting 'every_n_minutes' is not supported anymore. \n"
-                   "Please use cron schedule setting 'polling_schedule'. \n"
-                   "If you don't know what to do, have a look at here: "
-                   "https://github.com/MaxWinterstein/toogoodtogo-ha-mqtt-bridge")
+    if first_run:
+        logger.warning("Deprecation waring! - The setting 'every_n_minutes' is not supported anymore. \n"
+                       "Please use cron schedule setting 'polling_schedule'. \n"
+                       "If you don't know what to do, have a look at here: "
+                       "https://github.com/MaxWinterstein/toogoodtogo-ha-mqtt-bridge")
 
     return "*/" + tgtg.every_n_minutes + " * * * *"
 
