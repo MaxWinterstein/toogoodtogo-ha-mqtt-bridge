@@ -1,15 +1,17 @@
 import json
 import logging
 import os
+import random
 import threading
+from datetime import datetime, timedelta
 from pathlib import Path
 from time import sleep
 
 import arrow
 import coloredlogs
 import paho.mqtt.client as mqtt
-import watchdog
 from config import settings
+from croniter import croniter
 from tgtg import TgtgClient
 from watchdog import Watchdog
 
@@ -20,10 +22,9 @@ coloredlogs.install(
 
 mqtt_client = None
 first_run = True
-tgtg_client = TgtgClient(
-    email=settings.tgtg.email, language=settings.tgtg.get("language", "en-US"), timeout=30
-)
+tgtg_client = TgtgClient(email=settings.tgtg.email, language=settings.tgtg.language, timeout=30)
 watchdog: Watchdog = None
+watchdog_timeout = 0
 
 
 def check():
@@ -168,7 +169,7 @@ def rebuild_tgtg_client(tokens):
         access_token=tokens["access_token"],
         refresh_token=tokens["refresh_token"],
         user_id=tokens["user_id"],
-        language=settings.tgtg.get("language", "en-US"),
+        language=settings.tgtg.language,
         timeout=30,
     )
 
@@ -192,7 +193,6 @@ def check_for_removed_stores(shops: []):
             result = mqtt_client.publish(f"homeassistant/sensor/toogoodtogo_{deprecated_item}/config")
             logger.debug(f"Message published: Removal: {bool(result.rc == mqtt.MQTT_ERR_SUCCESS)}")
 
-    Path(settings.get("data_dir")).mkdir(parents=True, exist_ok=True)
     json.dump(checked_items, open(path, "w"))
 
     pass
@@ -201,25 +201,99 @@ def check_for_removed_stores(shops: []):
 def loop(event):
     logger.info("Starting loop")
 
+    create_data_dir()
     token_exits = check_existing_token_file()
     tgtg_client.login()
     if not token_exits and tgtg_client.access_token:
         write_token_file()
 
+    event.wait(calc_next_run())
     while True:
         logger.debug("Loop run started")
         if not check():
             logger.error("Loop was not successfully.")
         else:
             logger.debug("Loop run finished")
+            watchdog.timeout = calc_timeout()
             watchdog.reset()
-        event.wait(settings.tgtg.every_n_minutes * 60)
+
+        event.wait(calc_next_run())
+
+
+def calc_next_run():
+    cron_schedule = get_cron_schedule()
+    now = datetime.now()
+
+    if croniter.is_valid(cron_schedule):
+        cron = croniter(cron_schedule, now)
+        next_run = cron.get_next(datetime)
+        sleep_seconds = (next_run - now).seconds
+
+        if sleep_seconds >= 30:
+            if settings.get("randomize_calls"):
+                random_sleep = randomize_time(sleep_seconds)
+                if random_sleep > 30:
+                    next_run = next_run + timedelta(seconds=random_sleep)
+                    sleep_seconds = (next_run - now).seconds
+        elif sleep_seconds < 30:
+            # if sleep seconds < 30 skip next runtime
+            next_run = cron.get_next(datetime)
+            sleep_seconds = (next_run - now).seconds
+
+        logger.debug("Next run at " + str(next_run))
+        return sleep_seconds + 1
+    else:
+        exit_from_thread("Invalid cron schedule", 1)
+
+
+def get_fallback_cron(tgtg):
+    # Create fallback cron with old every_n_minutes setting
+    if "every_n_minutes" not in tgtg:
+        exit_from_thread("No interval found in settings, please check your config.", 1)
+
+    if first_run:
+        logger.warning(
+            "Deprecation waring! - The setting 'every_n_minutes' is not supported anymore. \n"
+            "Please use cron schedule setting 'polling_schedule'. \n"
+            "If you don't know what to do, have a look at here: "
+            "https://github.com/MaxWinterstein/toogoodtogo-ha-mqtt-bridge"
+        )
+
+    return "*/" + str(tgtg.every_n_minutes) + " * * * *"
+
+
+def randomize_time(sleep_seconds):
+    offset_val = sleep_seconds / 2
+
+    if offset_val < 1:
+        offset_val = 30
+
+    return random.randint(sleep_seconds - int(offset_val), sleep_seconds)
+
+
+def get_cron_schedule():
+    tgtg = settings.get("tgtg")
+    if "polling_schedule" not in tgtg:
+        return get_fallback_cron(tgtg)
+    else:
+        return tgtg.polling_schedule
+
+
+def create_data_dir():
+    data_dir = settings.get("data_dir")
+    if not os.path.isdir(data_dir):
+        Path(data_dir).mkdir(parents=True)
+
+
+def exit_from_thread(message, return_code):
+    logger.exception(message)
+    os._exit(return_code)
 
 
 def watchdog_handler():
-    logger.error(f"Watchdog handler fired! No pull in the last {settings.tgtg.every_n_minutes} minutes!")
-
-    os._exit(1)  # easy way to die from within a thread
+    exit_from_thread(
+        "Watchdog handler fired! No pull in the last " + str(watchdog_timeout / 60) + " minutes!", 1
+    )
 
 
 def on_disconnect(client, userdata, rc):
@@ -230,10 +304,28 @@ def on_disconnect(client, userdata, rc):
         client.reconnect()
 
 
+def calc_timeout():
+    global watchdog_timeout
+    now = datetime.now()
+    cron_schedule = get_cron_schedule()
+
+    if croniter.is_valid(cron_schedule):
+        # Get next run as base
+        base = croniter(cron_schedule, now).get_next(datetime)
+        # Get next two runs and calculate watchdog timeout
+        itr = croniter(cron_schedule, base)
+        for _ in range(2):
+            next_run = itr.get_next(datetime)
+        watchdog_timeout = (next_run - now).seconds + tgtg_client.timeout
+        return watchdog_timeout
+    else:
+        exit_from_thread("Invalid cron schedule", 1)
+
+
 def start():
     global watchdog, mqtt_client
     watchdog = Watchdog(
-        timeout=settings.tgtg.every_n_minutes * 60 * 3 + 30,  # 3 pull intervals + 1 timeout
+        timeout=calc_timeout(),
         user_handler=watchdog_handler,
     )
 

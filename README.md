@@ -1,6 +1,6 @@
 # TooGoodToGoo Home Assistant Mqtt Bridge
 
-<a href='https://ko-fi.com/maxwinterstein' target='_blank'><img height='35' style='border:0px;height:46px;' src='https://az743702.vo.msecnd.net/cdn/kofi3.png?v=0' border='0' alt='Buy Me a Coffee at ko-fi.com'></a>
+<a href="https://www.buymeacoffee.com/MaxWinterstein" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" height="41" width="174"></a>
 
 Small python tool to forward stock of you favourite stores to Home Assistant via MQTT.
 
@@ -29,14 +29,14 @@ Create some settings file called `settings.local.json` (see [`settings.example.j
   "tgtg": {
     "email": "me@example.ocm",
     "language": "en-US",
-    "every_n_minutes": 10
+    "polling_schedule": "*/10 * * * *"
   },
   "timezone": "Europe/Berlin",
   "locale": "en_us"
 }
 ```
 
-`every_n_minutes` sets the polling intervall. A value of e.g. 10 would fetch data every 10 minutes.
+`polling_schedule` sets the polling intervall in cron notation. For more Infomation have a look here: https://crontab.guru/
 
 `timezone` (optional) as TooGoodToGo provides its times as UTC we format it to local time. See [Wikipedia](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones) for valid values.
 
@@ -49,7 +49,7 @@ Create some settings file called `settings.local.json` (see [`settings.example.j
 And start with the mounted settings file, e.g. for macOS:
 
 ```bash
-docker run --rm -ti --pull always -v $PWD/settings.local.json:/app/settings.local.json -v $PWD/data/:/data maxwinterstein/toogoodtogo-ha-mqtt-bridge
+docker run --rm -ti --pull always -v $PWD/settings.local.json:/app/settings.local.json -v $PWD/data/:/data maxwinterstein/toogoodtogo-ha-mqtt-bridge -v /etc/localtime:/etc/localtime:ro
 ```
 
 ## Attributes
@@ -65,91 +65,4 @@ sensor:
         icon_template: mdi:currency-eur
         friendly_name: "Eilles Frankfurt Price"
         value_template: "{{ state_attr('sensor.toogoodtogo_eilles_frankfurt', 'price') }}"
-```
-
-## Get a list of all toogoodtogo sensors:
-
-Add the following piece of code into /developer-tools/template in HomeAssistant. (Remove the last comma)
-
-```yaml
-{%- for state in states -%}
-    {%- if (state.entity_id.startswith('sensor.toogoodtogo_'))-%}
-      {{state.entity_id}},
-    {%- endif -%}
-{%- endfor -%}
-```
-
-## Example HomeAssistant Automation
-
-### Notification
-
-```yaml
-alias: TooGoodToGo Notification
-description: "Sends a notification when a toogoodtogo offer becomes available"
-trigger:
-  - platform: state
-    entity_id:
-      >- # This is your list of toogoodoto sensors which are generated (Copy paste the list from above)
-      sensor.toogoodtogo_1,sensor.toogoodtogo_2,sensor.toogoodtogo_3
-    attribute: stock_available
-    from: false
-    to: true
-condition: []
-action:
-  - service: notify.mobile_app_android
-    data:
-      message: >-
-        Available: {{trigger.to_state.state}}, For:
-        {{trigger.to_state.attributes.price}} in
-        {{trigger.to_state.attributes.pickup_start_human}}
-      title: "{{trigger.to_state.attributes.friendly_name}}"
-      data:
-        clickAction: "{{trigger.to_state.attributes.url}}"
-        image: "{{trigger.to_state.attributes.picture}}"
-        group: tgtg
-        tag: "{{trigger.entity_id}}"
-  - service: notify.mobile_app_iphone
-    data:
-      message: >-
-        Available: {{trigger.to_state.state}}, For:
-        {{trigger.to_state.attributes.price}} in
-        {{trigger.to_state.attributes.pickup_start_human}},
-        {{trigger.to_state.attributes.friendly_name}}
-      title: "{{trigger.to_state.attributes.friendly_name}}"
-      data:
-        url: "{{trigger.to_state.attributes.url}}"
-        image: "{{trigger.to_state.attributes.picture}}"
-        group: tgtg
-        tag: "{{trigger.entity_id}}"
-mode: parallel
-max: 10
-```
-
-### Remove Notification
-
-```yaml
-alias: TooGoodToGo UnNotification
-description: ""
-trigger:
-  - platform: state
-    entity_id:
-      >- # This is your list of toogoodoto sensors which are generated (Copy paste the list from above)
-      sensor.toogoodtogo_1,sensor.toogoodtogo_2,sensor.toogoodtogo_3
-    attribute: stock_available
-    from: true
-    to: false
-condition: []
-action:
-  - service: notify.mobile_app_android
-    data:
-      message: clear_notification
-      data:
-        tag: "{{trigger.entity_id}}"
-  - service: notify.mobile_app_iphone
-    data:
-      message: clear_notification
-      data:
-        tag: "{{trigger.entity_id}}"
-mode: parallel
-max: 10
 ```

@@ -2,5 +2,6 @@
   "timezone": "Europe/Berlin",
   "locale": "en_us",
   "cleanup": true,
-  "data_dir": "./data"
+  "data_dir": "./data",
+  "randomize_calls": true
 }
