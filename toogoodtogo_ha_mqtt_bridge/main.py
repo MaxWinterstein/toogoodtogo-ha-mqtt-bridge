@@ -259,7 +259,7 @@ def get_fallback_cron(tgtg):
             "https://github.com/MaxWinterstein/toogoodtogo-ha-mqtt-bridge"
         )
 
-    return "*/" + tgtg.every_n_minutes + " * * * *"
+    return "*/" + str(tgtg.every_n_minutes) + " * * * *"
 
 
 def randomize_time(sleep_seconds):
