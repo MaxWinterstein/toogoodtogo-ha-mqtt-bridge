@@ -66,6 +66,7 @@ sensor:
         friendly_name: "Eilles Frankfurt Price"
         value_template: "{{ state_attr('sensor.toogoodtogo_eilles_frankfurt', 'price') }}"
 ```
+
 ## Get a list of all toogoodtogo sensors:
 
 Add the following piece of code into /developer-tools/template in HomeAssistant. (Remove the last comma)
