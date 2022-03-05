@@ -1,4 +1,4 @@
 .idea/
-/toogoodtogo_ha_mqtt_bridge/settings.local.json
-/toogoodtogo_ha_mqtt_bridge/tokens.json
-/toogoodtogo_ha_mqtt_bridge/data/known_shops.json
+**/settings.local.json
+**/tokens.json
+**/known_shops.json
