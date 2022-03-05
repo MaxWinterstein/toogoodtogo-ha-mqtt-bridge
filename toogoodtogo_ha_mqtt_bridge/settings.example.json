@@ -6,9 +6,9 @@
     "password": "mqtt"
   },
   "tgtg": {
-    "email": "me@example.ocm",
+    "email": "me@example.com",
     "language": "en-US",
-    "every_n_minutes": 10
+    "polling_schedule": "*/10 * * * *"
   },
   "timezone": "Europe/Berlin",
   "locale": "en_us"
