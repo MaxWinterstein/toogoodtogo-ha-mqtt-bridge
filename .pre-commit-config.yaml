@@ -17,7 +17,7 @@ repos:
         args: ["--ignore-path=.prettierignore"]
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.1.0
+    rev: v4.2.0
     hooks:
       - id: check-toml
       - id: check-json
