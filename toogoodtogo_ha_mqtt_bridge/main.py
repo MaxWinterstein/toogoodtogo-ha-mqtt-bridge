@@ -9,6 +9,7 @@ from time import sleep
 from random_user_agent.user_agent import UserAgent
 from random_user_agent.params import SoftwareName
 from google_play_scraper import app
+from packaging import version
 
 import arrow
 import coloredlogs
@@ -158,8 +159,11 @@ def is_latest_version():
         lang='de',
         country='de'
     )
-    version = app_info["version"]
-    if version != tokens["token_version"]:
+    act_version = version.parse(app_info["version"])
+    token_version = version.parse(tokens["token_version"])
+    minor_diff = act_version.minor - token_version.minor
+
+    if minor_diff > 2 or act_version.major > token_version.major:
         return False
     else:
         return True
