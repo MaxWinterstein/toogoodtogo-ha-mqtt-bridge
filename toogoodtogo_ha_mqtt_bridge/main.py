@@ -17,6 +17,7 @@ from random_user_agent.params import SoftwareName
 from random_user_agent.user_agent import UserAgent
 from tgtg import TgtgClient
 from watchdog import Watchdog
+from packaging import version
 
 logger = logging.getLogger(__name__)
 coloredlogs.install(
@@ -149,9 +150,16 @@ def build_ua():
 
 
 def is_latest_version():
-    app_info = app("com.app.tgtg", lang="de", country="de")
-    version = app_info["version"]
-    if version != tokens["token_version"]:
+    app_info = app(
+        'com.app.tgtg',
+        lang='de',
+        country='de'
+    )
+    act_version = version.parse(app_info["version"])
+    token_version = version.parse(tokens["token_version"])
+    minor_diff = act_version.minor - token_version.minor
+
+    if minor_diff > 2 or act_version.major > token_version.major:
         return False
     else:
         return True
