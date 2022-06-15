@@ -6,16 +6,15 @@ import threading
 from datetime import datetime, timedelta
 from pathlib import Path
 from time import sleep
-from random_user_agent.user_agent import UserAgent
-from random_user_agent.params import SoftwareName
-from google_play_scraper import app
-from packaging import version
 
 import arrow
 import coloredlogs
 import paho.mqtt.client as mqtt
 from config import settings
 from croniter import croniter
+from google_play_scraper import app
+from random_user_agent.params import SoftwareName
+from random_user_agent.user_agent import UserAgent
 from tgtg import TgtgClient
 from watchdog import Watchdog
 
@@ -141,29 +140,18 @@ def build_ua():
     software_names = [SoftwareName.ANDROID.value]
     user_agent_rotator = UserAgent(software_names=software_names, limit=20)
     user_agent = user_agent_rotator.get_random_user_agent()
-    user_agent = user_agent.split('(')[1]
+    user_agent = user_agent.split("(")[1]
 
-    app_info = app(
-        'com.app.tgtg',
-        lang='de',
-        country='de'
-    )
-    tgtg_version = app_info['version']
-    user_agent = 'TGTG/' + app_info['version'] + ' Dalvik/2.1.0 (' + user_agent + ')'
+    app_info = app("com.app.tgtg", lang="de", country="de")
+    tgtg_version = app_info["version"]
+    user_agent = "TGTG/" + app_info["version"] + " Dalvik/2.1.0 (" + user_agent + ")"
     return user_agent
 
 
 def is_latest_version():
-    app_info = app(
-        'com.app.tgtg',
-        lang='de',
-        country='de'
-    )
-    act_version = version.parse(app_info["version"])
-    token_version = version.parse(tokens["token_version"])
-    minor_diff = act_version.minor - token_version.minor
-
-    if minor_diff > 2 or act_version.major > token_version.major:
+    app_info = app("com.app.tgtg", lang="de", country="de")
+    version = app_info["version"]
+    if version != tokens["token_version"]:
         return False
     else:
         return True
@@ -177,7 +165,7 @@ def write_token_file():
         "user_id": tgtg_client.user_id,
         "last_time_token_refreshed": str(tgtg_client.last_time_token_refreshed),
         "ua": tgtg_client.user_agent,
-        "token_version": tgtg_version
+        "token_version": tgtg_version,
     }
 
     with open(settings.get("data_dir") + "/tokens.json", "w") as json_file:
@@ -226,7 +214,7 @@ def rebuild_tgtg_client(tokens):
         user_id=tokens["user_id"],
         user_agent=tokens["ua"],
         language=settings.tgtg.language,
-        timeout=30
+        timeout=30,
     )
 
 
@@ -380,10 +368,9 @@ def calc_timeout():
 
 def start():
     global tgtg_client, watchdog, mqtt_client
-    tgtg_client = TgtgClient(email=settings.tgtg.email,
-                             language=settings.tgtg.language,
-                             timeout=30,
-                             user_agent=build_ua())
+    tgtg_client = TgtgClient(
+        email=settings.tgtg.email, language=settings.tgtg.language, timeout=30, user_agent=build_ua()
+    )
 
     watchdog = Watchdog(
         timeout=calc_timeout(),
