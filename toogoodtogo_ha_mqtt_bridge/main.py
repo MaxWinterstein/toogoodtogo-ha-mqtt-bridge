@@ -6,6 +6,9 @@ import threading
 from datetime import datetime, timedelta
 from pathlib import Path
 from time import sleep
+from random_user_agent.user_agent import UserAgent
+from random_user_agent.params import SoftwareName
+from google_play_scraper import app
 
 import arrow
 import coloredlogs
@@ -22,7 +25,7 @@ coloredlogs.install(
 
 mqtt_client = None
 first_run = True
-tgtg_client = TgtgClient(email=settings.tgtg.email, language=settings.tgtg.language, timeout=30)
+tgtg_client = None
 watchdog: Watchdog = None
 watchdog_timeout = 0
 
@@ -130,6 +133,22 @@ def check():
     return True
 
 
+def build_ua():
+    software_names = [SoftwareName.ANDROID.value]
+    user_agent_rotator = UserAgent(software_names=software_names, limit=20)
+    user_agent = user_agent_rotator.get_random_user_agent()
+    user_agent = user_agent.split('(')[1]
+
+    app_info = app(
+        'com.app.tgtg',
+        lang='de',
+        country='de'
+    )
+
+    user_agent = 'TGTG/' + app_info['version'] + ' Dalvik/2.1.0 (' + user_agent + ')'
+    return user_agent
+
+
 def write_token_file():
     tokens = {
         "access_token": tgtg_client.access_token,
@@ -137,6 +156,7 @@ def write_token_file():
         "refresh_token": tgtg_client.refresh_token,
         "user_id": tgtg_client.user_id,
         "last_time_token_refreshed": str(tgtg_client.last_time_token_refreshed),
+        "ua": tgtg_client.user_agent
     }
 
     with open(settings.get("data_dir") + "/tokens.json", "w") as json_file:
@@ -169,8 +189,9 @@ def rebuild_tgtg_client(tokens):
         access_token=tokens["access_token"],
         refresh_token=tokens["refresh_token"],
         user_id=tokens["user_id"],
+        user_agent=tokens["ua"],
         language=settings.tgtg.language,
-        timeout=30,
+        timeout=30
     )
 
 
@@ -323,7 +344,12 @@ def calc_timeout():
 
 
 def start():
-    global watchdog, mqtt_client
+    global tgtg_client, watchdog, mqtt_client
+    tgtg_client = TgtgClient(email=settings.tgtg.email,
+                             language=settings.tgtg.language,
+                             timeout=30,
+                             user_agent=build_ua())
+
     watchdog = Watchdog(
         timeout=calc_timeout(),
         user_handler=watchdog_handler,
