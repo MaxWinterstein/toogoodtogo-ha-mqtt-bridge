@@ -162,14 +162,14 @@ def write_token_file():
     with open(settings.get("data_dir") + "/tokens.json", "w") as json_file:
         json.dump(tokens, json_file)
 
-    logger.debug("Written tokens.json file to filesystem")
+    logger.info("Written tokens.json file to filesystem")
 
 
 def check_existing_token_file():
     if os.path.isfile(settings.get("data_dir") + "/tokens.json"):
         return read_token_file()
     else:
-        logger.debug("Logging in with credentials")
+        logger.info("Logging in with credentials")
         return False
 
 
@@ -179,11 +179,11 @@ def read_token_file():
 
     if tokens:
         if "ua" not in tokens:
-            logger.debug("Old tokenfile found. Please login via email again.")
+            logger.info("Old tokenfile found. Please login via email again.")
             os.remove(settings.get("data_dir") + "/tokens.json")
             return False
 
-        logger.debug("Loaded tokens form tokenfile. Logging in with tokens.")
+        logger.info("Loaded tokens form tokenfile. Logging in with tokens.")
         rebuild_tgtg_client(tokens)
         return True
     else:
@@ -268,7 +268,7 @@ def calc_next_run():
             next_run = cron.get_next(datetime)
             sleep_seconds = (next_run - now).seconds
 
-        logger.debug("Next run at " + str(next_run))
+        logger.info("Next run at " + str(next_run))
         return sleep_seconds + 1
     else:
         exit_from_thread("Invalid cron schedule", 1)
