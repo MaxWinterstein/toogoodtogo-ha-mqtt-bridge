@@ -26,6 +26,8 @@ coloredlogs.install(
 mqtt_client = None
 first_run = True
 tgtg_client = None
+tgtg_version = None
+tokens = {}
 watchdog: Watchdog = None
 watchdog_timeout = 0
 
@@ -134,6 +136,7 @@ def check():
 
 
 def build_ua():
+    global tgtg_version
     software_names = [SoftwareName.ANDROID.value]
     user_agent_rotator = UserAgent(software_names=software_names, limit=20)
     user_agent = user_agent_rotator.get_random_user_agent()
@@ -144,23 +147,37 @@ def build_ua():
         lang='de',
         country='de'
     )
-
+    tgtg_version = app_info['version']
     user_agent = 'TGTG/' + app_info['version'] + ' Dalvik/2.1.0 (' + user_agent + ')'
     return user_agent
 
 
+def is_latest_version():
+    app_info = app(
+        'com.app.tgtg',
+        lang='de',
+        country='de'
+    )
+    version = app_info["version"]
+    if version != tokens["token_version"]:
+        return False
+    else:
+        return True
+
+
 def write_token_file():
-    tokens = {
+    tgtg_tokens = {
         "access_token": tgtg_client.access_token,
         "access_token_lifetime": tgtg_client.access_token_lifetime,
         "refresh_token": tgtg_client.refresh_token,
         "user_id": tgtg_client.user_id,
         "last_time_token_refreshed": str(tgtg_client.last_time_token_refreshed),
-        "ua": tgtg_client.user_agent
+        "ua": tgtg_client.user_agent,
+        "token_version": tgtg_version
     }
 
     with open(settings.get("data_dir") + "/tokens.json", "w") as json_file:
-        json.dump(tokens, json_file)
+        json.dump(tgtg_tokens, json_file)
 
     logger.info("Written tokens.json file to filesystem")
 
@@ -174,14 +191,21 @@ def check_existing_token_file():
 
 
 def read_token_file():
+    global tokens
     with open(settings.get("data_dir") + "/tokens.json") as f:
         tokens = json.load(f)
 
     if tokens:
-        if "ua" not in tokens:
-            logger.info("Old tokenfile found. Please login via email again.")
-            os.remove(settings.get("data_dir") + "/tokens.json")
-            return False
+        if first_run:
+            if "ua" not in tokens or "token_version" not in tokens:
+                logger.info("Old tokenfile found. Please login via email again.")
+                os.remove(settings.get("data_dir") + "/tokens.json")
+                return False
+
+            if not is_latest_version():
+                logger.info("Token for old TGTG version found. Please login via email again.")
+                os.remove(settings.get("data_dir") + "/tokens.json")
+                return False
 
         logger.info("Loaded tokens form tokenfile. Logging in with tokens.")
         rebuild_tgtg_client(tokens)
