@@ -167,8 +167,7 @@ def write_token_file():
 
 def check_existing_token_file():
     if os.path.isfile(settings.get("data_dir") + "/tokens.json"):
-        read_token_file()
-        return True
+        return read_token_file()
     else:
         logger.debug("Logging in with credentials")
         return False
@@ -179,8 +178,16 @@ def read_token_file():
         tokens = json.load(f)
 
     if tokens:
+        if "ua" not in tokens:
+            logger.debug("Old tokenfile found. Please login via email again.")
+            os.remove(settings.get("data_dir") + "/tokens.json")
+            return False
+
         logger.debug("Loaded tokens form tokenfile. Logging in with tokens.")
         rebuild_tgtg_client(tokens)
+        return True
+    else:
+        return False
 
 
 def rebuild_tgtg_client(tokens):
