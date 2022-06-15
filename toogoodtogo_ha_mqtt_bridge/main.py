@@ -141,7 +141,7 @@ def build_ua():
     software_names = [SoftwareName.ANDROID.value]
     user_agent_rotator = UserAgent(software_names=software_names, limit=20)
     user_agent = user_agent_rotator.get_random_user_agent()
-    user_agent = user_agent.split("(")[1]
+    user_agent = user_agent.split("(")[1].split(')')[0]
 
     app_info = app("com.app.tgtg", lang="de", country="de")
     tgtg_version = app_info["version"]
