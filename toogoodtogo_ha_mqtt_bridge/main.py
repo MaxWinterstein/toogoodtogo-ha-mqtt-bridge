@@ -12,6 +12,10 @@ import coloredlogs
 import paho.mqtt.client as mqtt
 from config import settings
 from croniter import croniter
+from google_play_scraper import app
+from packaging import version
+from random_user_agent.params import SoftwareName
+from random_user_agent.user_agent import UserAgent
 from tgtg import TgtgClient
 from watchdog import Watchdog
 
@@ -22,7 +26,9 @@ coloredlogs.install(
 
 mqtt_client = None
 first_run = True
-tgtg_client = TgtgClient(email=settings.tgtg.email, language=settings.tgtg.language, timeout=30)
+tgtg_client = None
+tgtg_version = None
+tokens = {}
 watchdog: Watchdog = None
 watchdog_timeout = 0
 
@@ -130,45 +136,101 @@ def check():
     return True
 
 
+def build_ua():
+    global tgtg_version
+    software_names = [SoftwareName.ANDROID.value]
+    user_agent_rotator = UserAgent(software_names=software_names, limit=20)
+    user_agent = user_agent_rotator.get_random_user_agent()
+    user_agent = user_agent.split("(")[1].split(")")[0]
+
+    app_info = app("com.app.tgtg", lang="de", country="de")
+    tgtg_version = app_info["version"]
+    user_agent = "TGTG/" + app_info["version"] + " Dalvik/2.1.0 (" + user_agent + ")"
+    return user_agent
+
+
+def is_latest_version():
+    app_info = app("com.app.tgtg", lang="de", country="de")
+    act_version = version.parse(app_info["version"])
+    token_version = version.parse(tokens["token_version"])
+    minor_diff = act_version.minor - token_version.minor
+
+    if minor_diff > 2 or act_version.major > token_version.major:
+        global tgtg_version
+        tgtg_version = app_info["version"]
+        return False
+    else:
+        return True
+
+
 def write_token_file():
-    tokens = {
+    tgtg_tokens = {
         "access_token": tgtg_client.access_token,
         "access_token_lifetime": tgtg_client.access_token_lifetime,
         "refresh_token": tgtg_client.refresh_token,
         "user_id": tgtg_client.user_id,
         "last_time_token_refreshed": str(tgtg_client.last_time_token_refreshed),
+        "ua": tgtg_client.user_agent,
+        "token_version": tgtg_version,
     }
 
     with open(settings.get("data_dir") + "/tokens.json", "w") as json_file:
-        json.dump(tokens, json_file)
+        json.dump(tgtg_tokens, json_file)
 
-    logger.debug("Written tokens.json file to filesystem")
+    logger.info("Written tokens.json file to filesystem")
 
 
 def check_existing_token_file():
     if os.path.isfile(settings.get("data_dir") + "/tokens.json"):
-        read_token_file()
-        return True
+        return read_token_file()
     else:
-        logger.debug("Logging in with credentials")
+        logger.info("Logging in with credentials")
         return False
 
 
 def read_token_file():
+    global tokens
     with open(settings.get("data_dir") + "/tokens.json") as f:
         tokens = json.load(f)
 
     if tokens:
-        logger.debug("Loaded tokens form tokenfile. Logging in with tokens.")
-        rebuild_tgtg_client(tokens)
+        if first_run:
+            if "ua" not in tokens or "token_version" not in tokens:
+                logger.info("Old tokenfile found. Please login via email again.")
+                os.remove(settings.get("data_dir") + "/tokens.json")
+                return False
+
+        if not is_latest_version():
+            logger.info("Token for old TGTG version found, updating useragent.")
+            update_ua()
+        else:
+            rebuild_tgtg_client()
+
+        logger.info("Loaded tokens form tokenfile. Logging in with tokens.")
+        return True
+    else:
+        return False
 
 
-def rebuild_tgtg_client(tokens):
+def update_ua():
+    global tokens
+    ua = tokens["ua"]
+    updated_ua = ua.split(" ")[1:]
+    updated_ua = "TGTG/" + tgtg_version + " " + " ".join(updated_ua)
+    tokens["ua"] = updated_ua
+    tokens["token_version"] = tgtg_version
+
+    rebuild_tgtg_client()
+    write_token_file()
+
+
+def rebuild_tgtg_client():
     global tgtg_client
     tgtg_client = TgtgClient(
         access_token=tokens["access_token"],
         refresh_token=tokens["refresh_token"],
         user_id=tokens["user_id"],
+        user_agent=tokens["ua"],
         language=settings.tgtg.language,
         timeout=30,
     )
@@ -210,6 +272,9 @@ def loop(event):
     event.wait(calc_next_run())
     while True:
         logger.debug("Loop run started")
+        if not is_latest_version():
+            logger.info("Token for old TGTG version found, updating useragent.")
+            update_ua()
         if not check():
             logger.error("Loop was not successfully.")
         else:
@@ -240,7 +305,7 @@ def calc_next_run():
             next_run = cron.get_next(datetime)
             sleep_seconds = (next_run - now).seconds
 
-        logger.debug("Next run at " + str(next_run))
+        logger.info("Next run at " + str(next_run))
         return sleep_seconds + 1
     else:
         exit_from_thread("Invalid cron schedule", 1)
@@ -323,7 +388,11 @@ def calc_timeout():
 
 
 def start():
-    global watchdog, mqtt_client
+    global tgtg_client, watchdog, mqtt_client
+    tgtg_client = TgtgClient(
+        email=settings.tgtg.email, language=settings.tgtg.language, timeout=30, user_agent=build_ua()
+    )
+
     watchdog = Watchdog(
         timeout=calc_timeout(),
         user_handler=watchdog_handler,
