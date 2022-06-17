@@ -43,7 +43,7 @@ def check():
 
         # Autodiscover
         result_ad = mqtt_client.publish(
-            f"homeassistant/sensor/toogoodtogo_{item_id}/config",
+            f"homeassistant/sensor/toogoodtogo_bridge/{item_id}/config",
             json.dumps(
                 {
                     "name": f"TooGoodToGo - {shop['display_name']}",
@@ -52,6 +52,14 @@ def check():
                     "json_attributes_topic": f"homeassistant/sensor/toogoodtogo_{item_id}/attr",
                     "unit_of_measurement": "portions",
                     "value_template": "{{ value_json.stock }}",
+                    "device": {
+                        "identifiers": [
+                            "toogoodtogo_bridge"
+                        ],
+                        "manufacturer": "Max Winterstein",
+                        "model": "TooGoodToGo favorites",
+                        "name": "Too Good To Go"
+                    },
                     "unique_id": f"toogoodtogo_{item_id}",
                 }
             ),
