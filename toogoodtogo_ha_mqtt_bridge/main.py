@@ -156,6 +156,8 @@ def is_latest_version():
     minor_diff = act_version.minor - token_version.minor
 
     if minor_diff > 2 or act_version.major > token_version.major:
+        global tgtg_version
+        tgtg_version = app_info["version"]
         return False
     else:
         return True
@@ -198,19 +200,31 @@ def read_token_file():
                 os.remove(settings.get("data_dir") + "/tokens.json")
                 return False
 
-            if not is_latest_version():
-                logger.info("Token for old TGTG version found. Please login via email again.")
-                os.remove(settings.get("data_dir") + "/tokens.json")
-                return False
+        if not is_latest_version():
+            logger.info("Token for old TGTG version found, updating useragent.")
+            update_ua()
+        else:
+            rebuild_tgtg_client()
 
         logger.info("Loaded tokens form tokenfile. Logging in with tokens.")
-        rebuild_tgtg_client(tokens)
         return True
     else:
         return False
 
 
-def rebuild_tgtg_client(tokens):
+def update_ua():
+    global tokens
+    ua = tokens["ua"]
+    updated_ua = ua.split(' ')[1:]
+    updated_ua = "TGTG/" + tgtg_version + " " + " ".join(updated_ua)
+    tokens["ua"] = updated_ua
+    tokens["token_version"] = tgtg_version
+
+    rebuild_tgtg_client()
+    write_token_file()
+
+
+def rebuild_tgtg_client():
     global tgtg_client
     tgtg_client = TgtgClient(
         access_token=tokens["access_token"],
@@ -258,6 +272,9 @@ def loop(event):
     event.wait(calc_next_run())
     while True:
         logger.debug("Loop run started")
+        if not is_latest_version():
+            logger.info("Token for old TGTG version found, updating useragent.")
+            update_ua()
         if not check():
             logger.error("Loop was not successfully.")
         else:
