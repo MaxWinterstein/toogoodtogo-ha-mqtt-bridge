@@ -215,7 +215,7 @@ def read_token_file():
 def update_ua():
     global tokens
     ua = tokens["ua"]
-    updated_ua = ua.split(' ')[1:]
+    updated_ua = ua.split(" ")[1:]
     updated_ua = "TGTG/" + tgtg_version + " " + " ".join(updated_ua)
     tokens["ua"] = updated_ua
     tokens["token_version"] = tgtg_version
