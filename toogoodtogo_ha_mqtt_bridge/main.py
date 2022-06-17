@@ -59,12 +59,10 @@ def check():
                     "unit_of_measurement": "portions",
                     "value_template": "{{ value_json.stock }}",
                     "device": {
-                        "identifiers": [
-                            "toogoodtogo_bridge"
-                        ],
+                        "identifiers": ["toogoodtogo_bridge"],
                         "manufacturer": "Max Winterstein",
                         "model": "TooGoodToGo favorites",
-                        "name": "Too Good To Go"
+                        "name": "Too Good To Go",
                     },
                     "unique_id": f"toogoodtogo_{item_id}",
                 }
