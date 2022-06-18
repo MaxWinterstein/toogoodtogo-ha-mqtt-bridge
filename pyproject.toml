@@ -6,7 +6,7 @@ profile = "black"
 
 [tool.poetry]
 name = "toogoodtogo-ha-mqtt-bridge"
-version = "2.2.0"
+version = "2.2.1"
 description = ""
 authors = ["Max Winterstein <github@winterstein.mx>"]
 
@@ -19,6 +19,8 @@ coloredlogs = "^15.0"
 tenacity = "^6.3.1"
 arrow = "^0.17.0"
 croniter = "^1.1.0"
+google-play-scraper = "^1.1.0"
+random_user_agent = "^1.0.1"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
