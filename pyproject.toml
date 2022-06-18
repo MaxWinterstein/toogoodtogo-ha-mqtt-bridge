@@ -21,6 +21,7 @@ arrow = "^0.17.0"
 croniter = "^1.1.0"
 google-play-scraper = "^1.1.0"
 random_user_agent = "^1.0.1"
+packaging = "^21.3"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

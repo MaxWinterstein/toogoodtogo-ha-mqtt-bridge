@@ -7,7 +7,9 @@ dynaconf==3.1.9; python_version >= "3.7"
 google-play-scraper==1.1.0; python_version >= "3.6"
 humanfriendly==10.0; python_version >= "2.7" and python_full_version < "3.0.0" or python_full_version >= "3.5.0"
 idna==3.3; python_version >= "3.7" and python_version < "4"
+packaging==21.3; python_version >= "3.6"
 paho-mqtt==1.6.1
+pyparsing==3.0.9; python_full_version >= "3.6.8" and python_version >= "3.6"
 pyreadline3==3.4.1; sys_platform == "win32" and python_version >= "3.8" and (python_version >= "2.7" and python_full_version < "3.0.0" or python_full_version >= "3.5.0")
 pyreadline==2.1; sys_platform == "win32" and python_version < "3.8" and (python_version >= "2.7" and python_full_version < "3.0.0" or python_full_version >= "3.5.0")
 python-dateutil==2.8.2; python_version >= "2.7" and python_full_version < "3.0.0" or python_full_version >= "3.5.0"
