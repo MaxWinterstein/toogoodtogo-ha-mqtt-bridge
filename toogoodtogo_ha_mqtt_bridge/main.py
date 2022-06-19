@@ -170,6 +170,7 @@ def is_latest_version():
 
 
 def write_token_file():
+    global tokens
     tgtg_tokens = {
         "access_token": tgtg_client.access_token,
         "access_token_lifetime": tgtg_client.access_token_lifetime,
@@ -179,6 +180,7 @@ def write_token_file():
         "ua": tgtg_client.user_agent,
         "token_version": tgtg_version,
     }
+    tokens = tgtg_tokens
 
     with open(settings.get("data_dir") + "/tokens.json", "w") as json_file:
         json.dump(tgtg_tokens, json_file)
