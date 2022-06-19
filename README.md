@@ -29,7 +29,8 @@ Create some settings file called `settings.local.json` (see [`settings.example.j
   "tgtg": {
     "email": "me@example.ocm",
     "language": "en-US",
-    "polling_schedule": "*/10 * * * *"
+    "polling_schedule": "*/10 * * * *",
+    "intense_fetch": {"interval": 30, "period_of_time": 5}
   },
   "timezone": "Europe/Berlin",
   "locale": "en_us"
@@ -37,6 +38,8 @@ Create some settings file called `settings.local.json` (see [`settings.example.j
 ```
 
 `polling_schedule` sets the polling intervall in cron notation. For more Infomation have a look here: https://crontab.guru/
+
+`intense_fetch` sets the intense fetch intervall and period of time
 
 `timezone` (optional) as TooGoodToGo provides its times as UTC we format it to local time. See [Wikipedia](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones) for valid values.
 
