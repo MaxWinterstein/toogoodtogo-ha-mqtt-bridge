@@ -8,7 +8,8 @@
   "tgtg": {
     "email": "me@example.com",
     "language": "en-US",
-    "polling_schedule": "*/10 * * * *"
+    "polling_schedule": "*/10 * * * *",
+    "intense_fetch": {"interval": 30, "period_of_time": 5}
   },
   "timezone": "Europe/Berlin",
   "locale": "en_us"
