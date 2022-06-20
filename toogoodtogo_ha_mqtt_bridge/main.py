@@ -453,7 +453,7 @@ def on_message(client, userdata, message):
             thread = threading.Thread(target=intense_fetch)
             intense_fetch_thread = thread
             thread.start()
-        else:
+        elif message.payload.decode("utf-8") == "OFF":
             if intense_fetch_thread:
                 intense_fetch_thread.do_run = False
                 logger.info("Intense fetch is stopped in the next cycle.")
