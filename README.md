@@ -30,7 +30,7 @@ Create some settings file called `settings.local.json` (see [`settings.example.j
     "email": "me@example.ocm",
     "language": "en-US",
     "polling_schedule": "*/10 * * * *",
-    "intense_fetch": {"interval": 30, "period_of_time": 5}
+    "intense_fetch": { "interval": 30, "period_of_time": 5 }
   },
   "timezone": "Europe/Berlin",
   "locale": "en_us"

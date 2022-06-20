@@ -402,17 +402,24 @@ def calc_timeout():
 
 
 def intense_fetch():
-    if "intense_fetch" not in settings.tgtg or "period_of_time" not in settings.tgtg.intense_fetch or "interval" \
-            not in settings.tgtg.intense_fetch:
+    if (
+        "intense_fetch" not in settings.tgtg
+        or "period_of_time" not in settings.tgtg.intense_fetch
+        or "interval" not in settings.tgtg.intense_fetch
+    ):
         logger.error("Incomplete settings file. Please check the sample!")
         return None
 
     if settings.tgtg.intense_fetch.period_of_time > 60:
-        logger.warning("Stopped intense fetch. Maximal intense fetch period time are 60 minutes. Reduce your setting!")
+        logger.warning(
+            "Stopped intense fetch. Maximal intense fetch period time are 60 minutes. Reduce your setting!"
+        )
         return None
 
     if settings.tgtg.intense_fetch.interval < 10:
-        logger.warning("Stopped intense fetch. Minimal intense fetch interval are 10 seconds. Increase your setting!")
+        logger.warning(
+            "Stopped intense fetch. Minimal intense fetch interval are 10 seconds. Increase your setting!"
+        )
         return None
 
     mqtt_client.publish(
