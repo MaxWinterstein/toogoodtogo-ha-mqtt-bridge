@@ -402,12 +402,16 @@ def calc_timeout():
 
 
 def intense_fetch(data):
+    if "period_of_time" not in data or "interval" not in data:
+        logger.error("Incomplete settings file. Please check the sample!")
+        return None
+
     if data.period_of_time > 60:
-        logger.warning("Maximal intense fetch period time are 60 minutes. Please reduce your setting")
+        logger.warning("Stopped intense fetch. Maximal intense fetch period time are 60 minutes. Reduce your setting!")
         return None
 
     if data.interval < 10:
-        logger.warning("Minimal intense fetch interval are 10 seconds. Please increase your setting")
+        logger.warning("Stopped intense fetch. Minimal intense fetch interval are 10 seconds. Increase your setting!")
         return None
 
     mqtt_client.publish(
