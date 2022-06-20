@@ -401,16 +401,17 @@ def calc_timeout():
         exit_from_thread("Invalid cron schedule", 1)
 
 
-def intense_fetch(data):
-    if "period_of_time" not in data or "interval" not in data:
+def intense_fetch():
+    if "intense_fetch" not in settings.tgtg or "period_of_time" not in settings.tgtg.intense_fetch or "interval" \
+            not in settings.tgtg.intense_fetch:
         logger.error("Incomplete settings file. Please check the sample!")
         return None
 
-    if data.period_of_time > 60:
+    if settings.tgtg.intense_fetch.period_of_time > 60:
         logger.warning("Stopped intense fetch. Maximal intense fetch period time are 60 minutes. Reduce your setting!")
         return None
 
-    if data.interval < 10:
+    if settings.tgtg.intense_fetch.interval < 10:
         logger.warning("Stopped intense fetch. Minimal intense fetch interval are 10 seconds. Increase your setting!")
         return None
 
@@ -420,9 +421,7 @@ def intense_fetch(data):
     )
 
     t = threading.currentThread()
-    t_end = time.time() + 10
-    if data:
-        t_end = time.time() + 60 * data.period_of_time
+    t_end = time.time() + 60 * settings.tgtg.intense_fetch.period_of_time
 
     while time.time() < t_end and getattr(t, "do_run", True):
         logger.info("Intense fetch started")
@@ -430,11 +429,7 @@ def intense_fetch(data):
             logger.error("Intense fetch was not successfully")
         else:
             logger.info("Intense fetch finished")
-
-        if data:
-            sleep(data.interval)
-        else:
-            break
+            sleep(settings.tgtg.intense_fetch.interval)
 
     global intense_fetch_thread
     intense_fetch_thread = None
@@ -444,7 +439,7 @@ def intense_fetch(data):
         "OFF",
     )
 
-    logger.info("Intense fetch thread stopped")
+    logger.info("Intense fetch stopped")
 
 
 def on_message(client, userdata, message):
@@ -455,8 +450,7 @@ def on_message(client, userdata, message):
                 logger.error("Intense fetch thread already running. Doing nothing.")
                 return None
 
-            data = settings.tgtg.intense_fetch
-            thread = threading.Thread(target=intense_fetch, args=(data,))
+            thread = threading.Thread(target=intense_fetch)
             intense_fetch_thread = thread
             thread.start()
         else:
