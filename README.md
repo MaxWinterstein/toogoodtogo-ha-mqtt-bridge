@@ -39,11 +39,13 @@ Create some settings file called `settings.local.json` (see [`settings.example.j
 
 `polling_schedule` sets the polling interval in cron notation. For more Infomation have a look here: https://crontab.guru/
 
-`intense_fetch` (optional) is meant query your favourites for a short amount of time with a higher frequency. Ideal for those boxes you always miss!<br>
+`intense_fetch` (optional) is meant query your favourites for a short amount of time with a higher frequency.<br> 
+&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&ensp;&nbsp;Ideal for those boxes you always miss!<br>
 &emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&ensp;&nbsp;With the `interval`, the time between the queries can be controlled.<br>
 &emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&ensp;&nbsp;With the setting `period_of_time` the duration of the intense fetch can be defined.<br>
 &emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&ensp;&nbsp;The smallest interval is 10 seconds, and the maximum duration of the intense_fetch is 60 minutes.<br>
-&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&ensp;&nbsp;<b><span style="color:red">Attention:</span> This is meant for expierenced users as you might get blocked for a certain amount of time by toogoodtogo.</b>
+&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&ensp;&nbsp;<b><span style="color:red">Attention:</span> This is meant for expierenced users as you might get blocked for a certain amount<br>
+&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&ensp;&nbsp;of time by toogoodtogo.</b>
 
 `timezone` (optional) as TooGoodToGo provides its times as UTC we format it to local time. See [Wikipedia](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones) for valid values.
 
