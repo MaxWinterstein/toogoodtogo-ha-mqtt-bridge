@@ -477,8 +477,8 @@ def register_fetch_sensor():
         f"homeassistant/switch/toogoodtogo_bridge/intense_fetch/config",
         json.dumps(
             {
-                "name": "TooGoodToGo - Intense fetch",
-                "icon": "mdi:history",
+                "name": "Intense fetch",
+                "icon": "mdi:fast-forward",
                 "state_topic": "homeassistant/switch/toogoodtogo_intense_fetch/state",
                 "command_topic": "homeassistant/switch/toogoodtogo_intense_fetch/set",
                 "device": {
