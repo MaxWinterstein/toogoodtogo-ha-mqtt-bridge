@@ -2,16 +2,17 @@
 FROM python:3.7
 
 RUN mkdir /app /data
-
-COPY pyproject.toml toogoodtogo_ha_mqtt_bridge/ /app/
-
 WORKDIR /app
 
 ENV PYTHONPATH=${PYTHONPATH}:${PWD}
 ENV CRYPTOGRAPHY_DONT_BUILD_RUST=1
+RUN pip install cryptography==3.3.2
 
-RUN pip3 install poetry cryptography==3.3.2 && \
-    poetry config virtualenvs.create false && \
-    poetry install --no-dev
+# copy requirements first to create better cache layers
+COPY requirements.txt /app/
+RUN pip install -r requirements.txt
+
+COPY toogoodtogo_ha_mqtt_bridge/ /app/
+
 ENV DYNACONF_DATA_DIR=/data
 CMD ["python", "main.py"]

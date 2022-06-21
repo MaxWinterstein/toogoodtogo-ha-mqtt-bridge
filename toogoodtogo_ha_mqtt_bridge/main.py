@@ -10,14 +10,15 @@ from time import sleep
 import arrow
 import coloredlogs
 import paho.mqtt.client as mqtt
-from config import settings
 from croniter import croniter
 from google_play_scraper import app
 from packaging import version
 from random_user_agent.params import SoftwareName
 from random_user_agent.user_agent import UserAgent
 from tgtg import TgtgClient
-from watchdog import Watchdog
+
+from toogoodtogo_ha_mqtt_bridge.config import settings
+from toogoodtogo_ha_mqtt_bridge.watchdog import Watchdog
 
 logger = logging.getLogger(__name__)
 coloredlogs.install(
