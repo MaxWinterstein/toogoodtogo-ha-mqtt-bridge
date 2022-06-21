@@ -18,8 +18,8 @@ from random_user_agent.params import SoftwareName
 from random_user_agent.user_agent import UserAgent
 from tgtg import TgtgClient
 
-from toogoodtogo_ha_mqtt_bridge.config import settings
-from toogoodtogo_ha_mqtt_bridge.watchdog import Watchdog
+from config import settings
+from watchdog import Watchdog
 
 logger = logging.getLogger(__name__)
 coloredlogs.install(
@@ -159,7 +159,14 @@ def build_ua():
 
 
 def is_latest_version():
-    app_info = app("com.app.tgtg", lang="de", country="de")
+    logger.info("Checking latest tgtg appstore version")
+    try:
+        app_info = app("com.app.tgtg", lang="de", country="de")
+    except Exception as ex:
+        logger.error("Error getting version ID from google playstore. Skipping version check this time. "
+                     "Exception was: " + str(ex))
+        return True
+
     act_version = version.parse(app_info["version"])
     token_version = version.parse(tokens["token_version"])
     minor_diff = act_version.minor - token_version.minor
@@ -271,7 +278,7 @@ def check_for_removed_stores(shops: []):
     pass
 
 
-def loop(event):
+def fetch_loop(event):
     logger.info("Starting loop")
 
     create_data_dir()
@@ -285,9 +292,6 @@ def loop(event):
         logger.debug("Loop run started")
 
         if not intense_fetch_thread:
-            if not is_latest_version():
-                logger.info("Token for old TGTG version found, updating useragent")
-                update_ua()
             if not check():
                 logger.error("Loop was not successfully.")
             else:
@@ -298,6 +302,19 @@ def loop(event):
         watchdog.timeout = calc_timeout()
         watchdog.reset()
         event.wait(calc_next_run())
+
+
+def ua_check_loop():
+    while True:
+        now = datetime.now()
+        cron = croniter("0 0,12 * * *", now)
+        next_run = cron.get_next(datetime)
+        sleep_seconds = (next_run - now).seconds
+        sleep(sleep_seconds)
+        if tokens:
+            if not is_latest_version():
+                logger.info("Token for old TGTG version found, updating useragent.")
+                update_ua()
 
 
 def calc_next_run():
@@ -524,7 +541,10 @@ def start():
 
     mqtt_client.loop_start()
     event = threading.Event()
-    thread = threading.Thread(target=loop, args=(event,))
+    thread = threading.Thread(target=fetch_loop, args=(event,))
+    thread.start()
+
+    thread = threading.Thread(target=ua_check_loop)
     thread.start()
 
 
