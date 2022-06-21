@@ -3,6 +3,7 @@ import logging
 import os
 import random
 import threading
+import time
 from datetime import datetime, timedelta
 from pathlib import Path
 from time import sleep
@@ -28,6 +29,7 @@ mqtt_client = None
 first_run = True
 tgtg_client = None
 tgtg_version = None
+intense_fetch_thread = None
 tokens = {}
 watchdog: Watchdog = None
 watchdog_timeout = 0
@@ -280,16 +282,20 @@ def loop(event):
     event.wait(calc_next_run())
     while True:
         logger.debug("Loop run started")
-        if not is_latest_version():
-            logger.info("Token for old TGTG version found, updating useragent.")
-            update_ua()
-        if not check():
-            logger.error("Loop was not successfully.")
-        else:
-            logger.debug("Loop run finished")
-            watchdog.timeout = calc_timeout()
-            watchdog.reset()
 
+        if not intense_fetch_thread:
+            if not is_latest_version():
+                logger.info("Token for old TGTG version found, updating useragent")
+                update_ua()
+            if not check():
+                logger.error("Loop was not successfully.")
+            else:
+                logger.debug("Loop run finished")
+        else:
+            logger.info("Skipping cron scheduled job, as intense fetch is running")
+
+        watchdog.timeout = calc_timeout()
+        watchdog.reset()
         event.wait(calc_next_run())
 
 
@@ -395,6 +401,103 @@ def calc_timeout():
         exit_from_thread("Invalid cron schedule", 1)
 
 
+def intense_fetch():
+    if (
+        "intense_fetch" not in settings.tgtg
+        or "period_of_time" not in settings.tgtg.intense_fetch
+        or "interval" not in settings.tgtg.intense_fetch
+    ):
+        logger.error("Incomplete settings file. Please check the sample!")
+        return None
+
+    if settings.tgtg.intense_fetch.period_of_time > 60:
+        logger.warning(
+            "Stopped intense fetch. Maximal intense fetch period time are 60 minutes. Reduce your setting!"
+        )
+        return None
+
+    if settings.tgtg.intense_fetch.interval < 10:
+        logger.warning(
+            "Stopped intense fetch. Minimal intense fetch interval are 10 seconds. Increase your setting!"
+        )
+        return None
+
+    mqtt_client.publish(
+        f"homeassistant/switch/toogoodtogo_intense_fetch/state",
+        "ON",
+    )
+
+    t = threading.currentThread()
+    t_end = time.time() + 60 * settings.tgtg.intense_fetch.period_of_time
+
+    while time.time() < t_end and getattr(t, "do_run", True):
+        logger.info("Intense fetch started")
+        if not check():
+            logger.error("Intense fetch was not successfully")
+        else:
+            logger.info("Intense fetch finished")
+            sleep(settings.tgtg.intense_fetch.interval)
+
+    global intense_fetch_thread
+    intense_fetch_thread = None
+
+    mqtt_client.publish(
+        f"homeassistant/switch/toogoodtogo_intense_fetch/state",
+        "OFF",
+    )
+
+    logger.info("Intense fetch stopped")
+
+
+def on_message(client, userdata, message):
+    global intense_fetch_thread
+    if message.topic.endswith("toogoodtogo_intense_fetch/set"):
+        if message.payload.decode("utf-8") == "ON":
+            if intense_fetch_thread:
+                logger.error("Intense fetch thread already running. Doing nothing.")
+                return None
+
+            thread = threading.Thread(target=intense_fetch)
+            intense_fetch_thread = thread
+            thread.start()
+        elif message.payload.decode("utf-8") == "OFF":
+            if intense_fetch_thread:
+                intense_fetch_thread.do_run = False
+                logger.info("Intense fetch is stopped in the next cycle.")
+                mqtt_client.publish(
+                    f"homeassistant/switch/toogoodtogo_intense_fetch/state",
+                    "OFF",
+                )
+            else:
+                logger.info("No running thread found. Doing nothing.")
+
+
+def register_fetch_sensor():
+    mqtt_client.publish(
+        f"homeassistant/switch/toogoodtogo_bridge/intense_fetch/config",
+        json.dumps(
+            {
+                "name": "Intense fetch",
+                "icon": "mdi:fast-forward",
+                "state_topic": "homeassistant/switch/toogoodtogo_intense_fetch/state",
+                "command_topic": "homeassistant/switch/toogoodtogo_intense_fetch/set",
+                "device": {
+                    "identifiers": ["toogoodtogo_bridge"],
+                    "manufacturer": "Max Winterstein",
+                    "model": "TooGoodToGo favorites",
+                    "name": "Too Good To Go",
+                },
+                "unique_id": f"toogoodtogo_intense_fetch_switch",
+            }
+        ),
+    )
+
+    mqtt_client.publish(
+        f"homeassistant/switch/toogoodtogo_intense_fetch/state",
+        "OFF",
+    )
+
+
 def start():
     global tgtg_client, watchdog, mqtt_client
     tgtg_client = TgtgClient(
@@ -412,10 +515,14 @@ def start():
         mqtt_client.username_pw_set(username=settings.mqtt.username, password=settings.mqtt.password)
     mqtt_client.connect(host=settings.mqtt.host, port=int(settings.mqtt.port))
     mqtt_client.on_disconnect = on_disconnect
+
+    if "intense_fetch" in settings.tgtg:
+        mqtt_client.subscribe("homeassistant/switch/toogoodtogo_intense_fetch/set")
+        register_fetch_sensor()
+        mqtt_client.on_message = on_message
+
     mqtt_client.loop_start()
-
     event = threading.Event()
-
     thread = threading.Thread(target=loop, args=(event,))
     thread.start()
 
