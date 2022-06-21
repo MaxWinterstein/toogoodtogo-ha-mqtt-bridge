@@ -515,9 +515,12 @@ def start():
         mqtt_client.username_pw_set(username=settings.mqtt.username, password=settings.mqtt.password)
     mqtt_client.connect(host=settings.mqtt.host, port=int(settings.mqtt.port))
     mqtt_client.on_disconnect = on_disconnect
-    mqtt_client.subscribe("homeassistant/switch/toogoodtogo_intense_fetch/set")
-    register_fetch_sensor()
-    mqtt_client.on_message = on_message
+
+    if "intense_fetch" in settings.tgtg:
+        mqtt_client.subscribe("homeassistant/switch/toogoodtogo_intense_fetch/set")
+        register_fetch_sensor()
+        mqtt_client.on_message = on_message
+
     mqtt_client.loop_start()
     event = threading.Event()
     thread = threading.Thread(target=loop, args=(event,))
