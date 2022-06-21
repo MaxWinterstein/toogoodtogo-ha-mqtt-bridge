@@ -41,7 +41,7 @@ Create some settings file called `settings.local.json` (see [`settings.example.j
 
 `intense_fetch` (optional) is meant query your favourites for a short amount of time with a higher frequency. Ideal for those boxes you always miss!<br>
 &emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&ensp;&nbsp;With the `interval`, the time between the queries can be controlled.<br>
-&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&ensp;&nbsp;With the setting `period_of_time` the duration of the intense fetch can be defined.<br> 
+&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&ensp;&nbsp;With the setting `period_of_time` the duration of the intense fetch can be defined.<br>
 &emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&ensp;&nbsp;The smallest interval is 10 seconds, and the maximum duration of the intense_fetch is 60 minutes.<br>
 &emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&ensp;&nbsp;<b><span style="color:red">Attention:</span> This is meant for expierenced users as you might get blocked for a certain amount of time by toogoodtogo.</b>
 
