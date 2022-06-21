@@ -32,3 +32,26 @@ jobs:
           tags: |
             maxwinterstein/toogoodtogo-ha-mqtt-bridge:${{ github.event.inputs.version }}
             maxwinterstein/toogoodtogo-ha-mqtt-bridge:latest
+
+  build-and-push-testing:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      - name: Login to DockerHub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Build and push
+        uses: docker/build-push-action@v3
+        with:
+          platforms: linux/amd64,linux/arm/v7,linux/arm64
+          push: true
+          tags: |
+            maxwinterstein/toogoodtogo-ha-mqtt-bridge:testing
