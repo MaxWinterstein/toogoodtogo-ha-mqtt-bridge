@@ -18,8 +18,8 @@ from random_user_agent.params import SoftwareName
 from random_user_agent.user_agent import UserAgent
 from tgtg import TgtgClient
 
-from config import settings
-from watchdog import Watchdog
+from toogoodtogo_ha_mqtt_bridge.config import settings
+from toogoodtogo_ha_mqtt_bridge.watchdog import Watchdog
 
 logger = logging.getLogger(__name__)
 coloredlogs.install(
