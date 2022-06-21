@@ -6,7 +6,7 @@ on:
     inputs:
       version:
         description: "Image Tag"
-        required: true
+        required: false
 
 jobs:
   build-and-push-testing:
