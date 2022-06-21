@@ -39,7 +39,7 @@ Create some settings file called `settings.local.json` (see [`settings.example.j
 
 `polling_schedule` sets the polling interval in cron notation. For more Infomation have a look here: https://crontab.guru/
 
-`intense_fetch` (optional) is meant query your favourites for a short amount of time with a higher frequency.<br> 
+`intense_fetch` (optional) is meant query your favourites for a short amount of time with a higher frequency.<br>
 &emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&ensp;&nbsp;Ideal for those boxes you always miss!<br>
 &emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&ensp;&nbsp;With the `interval`, the time between the queries can be controlled.<br>
 &emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&ensp;&nbsp;With the setting `period_of_time` the duration of the intense fetch can be defined.<br>
