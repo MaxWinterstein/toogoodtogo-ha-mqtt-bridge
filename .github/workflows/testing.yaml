@@ -1,4 +1,4 @@
-name: build-and-push
+name: build-and-push-testing
 
 on:
   # Allows you to run this workflow manually from the Actions tab
