@@ -1,4 +1,4 @@
-# TooGoodToGoo Home Assistant Mqtt Bridge
+# TooGoodToGo Home Assistant Mqtt Bridge
 
 <a href='https://ko-fi.com/supportkofi' target='_blank'><img height='35' style='border:0px;height:46px;' src='https://az743702.vo.msecnd.net/cdn/kofi3.png?v=0' border='0' alt='Buy Me a Coffee at ko-fi.com'></a>
 
@@ -8,13 +8,23 @@ Stores are automatically created via MQTT Discovery and contain some addition at
 
 ## Installation:
 
-### Add-On
+### Home Assistant Add-On
 
 Easiest way is to use the Home Assistant Add-on. I created one in [my Home Assistant Add-on repository](https://github.com/MaxWinterstein/homeassistant-addons/).
 
 ### Docker
 
 Docker image is created automatically and available at dockerhub: [maxwinterstein/toogoodtogo-ha-mqtt-bridge](https://hub.docker.com/r/maxwinterstein/toogoodtogo-ha-mqtt-bridge)
+
+### Native
+
+- Create some virtualenv (or what you personally prefer) with at least python 3.6
+- Install requirements `pip install -r requirements.txt`
+- Install TooGoodToGoo Home Assistant Mqtt Bridge `pip install .`
+
+### Configuration
+
+_Not needed when using HA Add-On_
 
 Create some settings file called `settings.local.json` (see [`settings.example.json`](https://github.com/MaxWinterstein/toogoodtogo-ha-mqtt-bridge/blob/main/toogoodtogo_ha_mqtt_bridge/settings.example.json)):
 
@@ -162,3 +172,7 @@ action:
 mode: parallel
 max: 10
 ```
+
+## Development
+
+This project uses [pre-commit](https://pre-commit.com/) to make sure the code keeps clean and similar. Usage is highly advised.

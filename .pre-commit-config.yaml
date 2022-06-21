@@ -1,5 +1,5 @@
-ci:
-  skip: [system]
+# ci:
+#   skip: [system]
 
 repos:
   - repo: https://github.com/psf/black
@@ -24,11 +24,3 @@ repos:
     hooks:
       - id: check-toml
       - id: check-json
-
-  - repo: local
-    hooks:
-      - id: system
-        name: Requirements
-        entry: poetry export --format=requirements.txt --without-hashes --dev --output=requirements.txt
-        pass_filenames: false
-        language: system
