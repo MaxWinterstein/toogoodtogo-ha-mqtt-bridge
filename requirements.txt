@@ -4,7 +4,7 @@
 #
 #    pip-compile
 #
-arrow==0.17.0
+arrow==1.2.2
     # via toogoodtogo-ha-mqtt-bridge (setup.py)
 certifi==2022.6.15
     # via requests
