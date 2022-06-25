@@ -12,7 +12,8 @@ RUN pip install cryptography==3.3.2
 COPY requirements.txt /app/
 RUN pip install -r requirements.txt
 
-COPY toogoodtogo_ha_mqtt_bridge/ /app/
+COPY . /app/
+RUN python setup.py install
 
 ENV DYNACONF_DATA_DIR=/data
-CMD ["python", "main.py"]
+CMD ["python", "toogoodtogo_ha_mqtt_bridge/main.py"]
