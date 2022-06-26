@@ -6,6 +6,9 @@ Small python tool to forward stock of you favourite stores to Home Assistant via
 
 Stores are automatically created via MQTT Discovery and contain some addition attributes like price and more.
 
+![Screen Shot 2022-06-26 at 19 24 32](https://user-images.githubusercontent.com/5927148/175826396-0a9c5c16-ae7f-4809-a8a7-5eda18b96370.png)
+
+
 ## Installation:
 
 ### Home Assistant Add-On
