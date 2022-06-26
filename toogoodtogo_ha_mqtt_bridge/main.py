@@ -163,8 +163,10 @@ def is_latest_version():
     try:
         app_info = app("com.app.tgtg", lang="de", country="de")
     except Exception as ex:
-        logger.error("Error getting version ID from google playstore. Skipping version check this time. "
-                     "Exception was: " + str(ex))
+        logger.error(
+            "Error getting version ID from google playstore. Skipping version check this time. "
+            "Exception was: " + str(ex)
+        )
         return True
 
     act_version = version.parse(app_info["version"])
