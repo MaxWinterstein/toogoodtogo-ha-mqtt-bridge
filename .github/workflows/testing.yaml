@@ -3,10 +3,6 @@ name: build-and-push-testing
 on:
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
-    inputs:
-      version:
-        description: "Image Tag"
-        required: false
 
 jobs:
   build-and-push-testing:
