@@ -8,7 +8,6 @@ Stores are automatically created via MQTT Discovery and contain some addition at
 
 ![Screen Shot 2022-06-26 at 19 24 32](https://user-images.githubusercontent.com/5927148/175826396-0a9c5c16-ae7f-4809-a8a7-5eda18b96370.png)
 
-
 ## Installation:
 
 ### Home Assistant Add-On
@@ -50,27 +49,33 @@ Create some settings file called `settings.local.json` (see [`settings.example.j
 }
 ```
 
-#### `polling_schedule` 
+#### `polling_schedule`
+
 sets the polling interval in cron notation. For more Infomation have a look here: https://crontab.guru/
 
-#### `intense_fetch` (optional) 
+#### `intense_fetch` (optional)
+
 Is meant query your favourites for a short amount of time with a higher frequency.  
 Ideal for those boxes you always miss!  
 With the `interval`, the time between the queries can be controlled.  
 With the setting `period_of_time` the duration of the intense fetch can be defined.  
 The smallest interval is 10 seconds, and the maximum duration of the intense_fetch is 60 minutes.  
-**Attention:** This is meant for expierenced users as you might get blocked for a certain amount of time by toogoodtogo. 
+**Attention:** This is meant for expierenced users as you might get blocked for a certain amount of time by toogoodtogo.
 
-#### `timezone` (optional) 
+#### `timezone` (optional)
+
 as TooGoodToGo provides its times as UTC we format it to local time. See [Wikipedia](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones) for valid values.
 
-#### `locale` (optional) 
+#### `locale` (optional)
+
 to format pickup times like _in 2 hours_. E.g. `de` for german, `en_us` for american english.
 
 #### `cleanup` (optional)
+
 remove items from Home Assistant if they are no longer in the fetched result.
 
 #### `data_dir` (optional)
+
 folder to store persistent data. Needed e.g. for `cleanup` feature.
 
 And start with the mounted settings file, e.g. for macOS:
