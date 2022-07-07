@@ -18,7 +18,7 @@ dynaconf==3.1.9
     # via -r requirements.in
 freezegun==1.2.1
     # via -r requirements.in
-google-play-scraper==1.1.0
+google-play-scraper==1.2.0
     # via -r requirements.in
 humanfriendly==10.0
     # via coloredlogs
