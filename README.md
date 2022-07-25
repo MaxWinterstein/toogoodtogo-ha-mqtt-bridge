@@ -84,6 +84,21 @@ And start with the mounted settings file, e.g. for macOS:
 docker run --rm -ti --pull always -v $PWD/settings.local.json:/app/settings.local.json -v $PWD/data/:/data -v /etc/localtime:/etc/localtime:ro maxwinterstein/toogoodtogo-ha-mqtt-bridge
 ```
 
+Or using docker-compose:
+
+```yaml
+version: '3'
+services:
+  toogoodtogo-bridge:
+    image: maxwinterstein/toogoodtogo-ha-mqtt-bridge
+    container_name: toogoodtogo-bridge
+    volumes:
+      - ./settings.local.json:/app/settings.local.json 
+      - ./data:/data
+      -  /etc/localtime:/etc/localtime:ro
+    restart: unless-stopped  
+```
+
 ## Attributes
 
 Attributes are used to keep the amount of sensors small. If you want some specific sensor you can create it as template sensor.
