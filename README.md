@@ -87,16 +87,16 @@ docker run --rm -ti --pull always -v $PWD/settings.local.json:/app/settings.loca
 Or using docker-compose:
 
 ```yaml
-version: '3'
+version: "3"
 services:
   toogoodtogo-bridge:
     image: maxwinterstein/toogoodtogo-ha-mqtt-bridge
     container_name: toogoodtogo-bridge
     volumes:
-      - ./settings.local.json:/app/settings.local.json 
+      - ./settings.local.json:/app/settings.local.json
       - ./data:/data
-      -  /etc/localtime:/etc/localtime:ro
-    restart: unless-stopped  
+      - /etc/localtime:/etc/localtime:ro
+    restart: unless-stopped
 ```
 
 ## Attributes
