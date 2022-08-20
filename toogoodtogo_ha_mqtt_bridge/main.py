@@ -171,7 +171,13 @@ def is_latest_version():
 
     act_version = version.parse(app_info["version"])
     token_version = version.parse(tokens["token_version"])
-    minor_diff = act_version.minor - token_version.minor
+
+    # Fix for users having already a tokens.json containt 'Varies with device'
+    # see https://github.com/MaxWinterstein/toogoodtogo-ha-mqtt-bridge/issues/87
+    if str(token_version) == "Varies with device":
+        minor_diff = 999
+    else:
+        minor_diff = act_version.minor - token_version.minor
 
     if minor_diff > 2 or act_version.major > token_version.major:
         global tgtg_version
