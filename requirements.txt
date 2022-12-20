@@ -41,7 +41,7 @@ requests==2.28.0
     # via tgtg
 six==1.16.0
     # via python-dateutil
-tenacity==8.0.1
+tenacity==8.1.0
     # via -r requirements.in
 tgtg==0.13.2
     # via -r requirements.in
