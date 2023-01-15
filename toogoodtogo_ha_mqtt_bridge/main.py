@@ -336,10 +336,8 @@ def calc_next_run():
 
         if sleep_seconds >= 30:
             if settings.get("randomize_calls"):
-                random_sleep = randomize_time(sleep_seconds)
-                if random_sleep > 30:
-                    next_run = next_run + timedelta(seconds=random_sleep)
-                    sleep_seconds = (next_run - now).seconds
+                sleep_seconds += random.randint(1, 20)
+                next_run = next_run + timedelta(seconds=sleep_seconds)
         elif sleep_seconds < 30:
             # if sleep seconds < 30 skip next runtime
             next_run = cron.get_next(datetime)
@@ -365,15 +363,6 @@ def get_fallback_cron(tgtg):
         )
 
     return "*/" + str(tgtg.every_n_minutes) + " * * * *"
-
-
-def randomize_time(sleep_seconds):
-    offset_val = sleep_seconds / 2
-
-    if offset_val < 1:
-        offset_val = 30
-
-    return random.randint(sleep_seconds - int(offset_val), sleep_seconds)
 
 
 def get_cron_schedule():
