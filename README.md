@@ -49,11 +49,11 @@ Create some settings file called `settings.local.json` (see [`settings.example.j
 }
 ```
 
-#### `polling_schedule`
+#### `tgtg.polling_schedule`
 
 sets the polling interval in cron notation. For more Infomation have a look here: https://crontab.guru/
 
-#### `intense_fetch` (optional)
+#### `tgtg.intense_fetch` (optional)
 
 Is meant query your favourites for a short amount of time with a higher frequency.  
 Ideal for those boxes you always miss!  
@@ -61,6 +61,14 @@ With the `interval`, the time between the queries can be controlled.
 With the setting `period_of_time` the duration of the intense fetch can be defined.  
 The smallest interval is 10 seconds, and the maximum duration of the intense_fetch is 60 minutes.  
 **Attention:** This is meant for expierenced users as you might get blocked for a certain amount of time by toogoodtogo.
+
+#### `enable_auto_intense_fetch` (optional)
+
+When enabled, above mentioned `intense_fetch` will be started automatically when a shops sales window (automatically created portions) starts.
+
+#### `randomize_calls` (optional)
+
+We add some [jitter](https://en.wikipedia.org/wiki/Jitter) on the fetch interval, so not everyone hits the poor API at the same second.
 
 #### `timezone` (optional)
 
