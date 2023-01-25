@@ -17,9 +17,9 @@ from google_play_scraper import app
 from packaging import version
 from random_user_agent.params import SoftwareName
 from random_user_agent.user_agent import UserAgent
-from tgtg import TgtgClient
 
 from toogoodtogo_ha_mqtt_bridge.config import settings
+from toogoodtogo_ha_mqtt_bridge.mytgtgclient import MyTgtgClient
 from toogoodtogo_ha_mqtt_bridge.watchdog import Watchdog
 
 logger = logging.getLogger(__name__)
@@ -27,9 +27,9 @@ coloredlogs.install(
     level="DEBUG", logger=logger, fmt="%(asctime)s [%(levelname)s] %(message)s"
 )  # pretty logging is pretty
 
-mqtt_client = None
+mqtt_client: mqtt.Client = None
 first_run = True
-tgtg_client = None
+tgtg_client: MyTgtgClient = None
 tgtg_version = None
 intense_fetch_thread = None
 tokens = {}
@@ -127,7 +127,7 @@ def check():
                 {
                     "price": price,
                     "stock_available": True if stock > 0 else False,
-                    "url": f"http://share.toogoodtogo.com/item/{item_id}",
+                    "url": f"https://share.toogoodtogo.com/item/{item_id}",
                     "pickup_start": pickup_start_str,
                     "pickup_start_human": pickup_start_human,
                     "pickup_end": pickup_end_str,
@@ -210,6 +210,7 @@ def write_token_file():
         "last_time_token_refreshed": str(tgtg_client.last_time_token_refreshed),
         "ua": tgtg_client.user_agent,
         "token_version": tgtg_version,
+        "cookie_datadome": tgtg_client.cookie_datadome,
     }
     tokens = tgtg_tokens
 
@@ -265,7 +266,8 @@ def update_ua():
 
 def rebuild_tgtg_client():
     global tgtg_client
-    tgtg_client = TgtgClient(
+    tgtg_client = MyTgtgClient(
+        cookie_datadome=tokens["cookie_datadome"],
         access_token=tokens["access_token"],
         refresh_token=tokens["refresh_token"],
         user_id=tokens["user_id"],
@@ -582,7 +584,7 @@ def run_pending_schedules():
 
 def start():
     global tgtg_client, watchdog, mqtt_client
-    tgtg_client = TgtgClient(
+    tgtg_client = MyTgtgClient(
         email=settings.tgtg.email, language=settings.tgtg.language, timeout=30, user_agent=build_ua()
     )
 
