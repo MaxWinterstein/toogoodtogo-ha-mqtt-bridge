@@ -396,8 +396,9 @@ def calc_next_run():
 
         if sleep_seconds >= 30:
             if settings.get("randomize_calls"):
-                sleep_seconds += random.randint(1, 20)
-                next_run = next_run + timedelta(seconds=sleep_seconds)
+                jitter = random.randint(1, 20)
+                sleep_seconds += jitter
+                next_run = next_run + timedelta(seconds=jitter)
         elif sleep_seconds < 30:
             # if sleep seconds < 30 skip next runtime
             next_run = cron.get_next(datetime)
