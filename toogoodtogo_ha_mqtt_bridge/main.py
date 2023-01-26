@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 import logging
 import os
@@ -27,14 +29,14 @@ coloredlogs.install(
     level="DEBUG", logger=logger, fmt="%(asctime)s [%(levelname)s] %(message)s"
 )  # pretty logging is pretty
 
-mqtt_client: mqtt.Client = None
+mqtt_client: mqtt.Client | None = None
 first_run = True
-tgtg_client: MyTgtgClient = None
-tgtg_version = None
+tgtg_client: MyTgtgClient | None = None
+tgtg_version: str | None = None
 intense_fetch_thread = None
 tokens = {}
 tokens_rev = 1  # in case of tokens.json changes, bump this
-watchdog: Watchdog = None
+watchdog: Watchdog | None = None
 watchdog_timeout = 0
 favourite_ids = []
 scheduled_jobs = []
@@ -186,7 +188,7 @@ def is_latest_version():
     act_version = version.parse(app_info["version"])
     token_version = version.parse(tokens["token_version"])
 
-    # Fix for users having already a tokens.json containt 'Varies with device'
+    # Fix for users having already a tokens.json contain 'Varies with device'
     # see https://github.com/MaxWinterstein/toogoodtogo-ha-mqtt-bridge/issues/87
     if str(token_version) == "Varies with device":
         minor_diff = 999
