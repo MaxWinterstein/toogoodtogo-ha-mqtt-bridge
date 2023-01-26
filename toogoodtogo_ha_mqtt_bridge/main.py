@@ -11,6 +11,7 @@ from time import sleep
 import arrow
 import coloredlogs
 import paho.mqtt.client as mqtt
+import schedule
 from croniter import croniter
 from google_play_scraper import app
 from packaging import version
@@ -34,19 +35,24 @@ intense_fetch_thread = None
 tokens = {}
 watchdog: Watchdog = None
 watchdog_timeout = 0
+favourite_ids = []
+scheduled_jobs = []
 
 
 def check():
     global first_run
+    global favourite_ids
+    favourite_ids.clear()
+
     if not first_run:
         tgtg_client.login()
         write_token_file()
 
-    first_run = False
     shops = tgtg_client.get_items(page_size=400)
     for shop in shops:
         stock = shop["items_available"]
         item_id = shop["item"]["item_id"]
+        favourite_ids.append(item_id)
 
         logger.debug(f"Pushing message for {shop['display_name']} // {item_id}")
 
@@ -141,6 +147,13 @@ def check():
 
     if settings.get("cleanup"):
         check_for_removed_stores(shops)
+
+    # Start automatic intense fetch watchdog
+    if first_run and settings.get("enable_auto_intense_fetch"):
+        thread = threading.Thread(target=next_sales_loop)
+        thread.start()
+
+    first_run = False
 
     return True
 
@@ -310,6 +323,53 @@ def fetch_loop(event):
         watchdog.timeout = calc_timeout()
         watchdog.reset()
         event.wait(calc_next_run())
+
+
+def next_sales_loop():
+    while True:
+        if favourite_ids:
+            for fav_id in favourite_ids:
+                item = tgtg_client.get_item(item_id=fav_id)
+                if "next_sales_window_purchase_start" in item:
+                    next_sales_window = arrow.get(item["next_sales_window_purchase_start"]).to(
+                        tz=settings.timezone
+                    )
+                    if next_sales_window > arrow.now(tz=settings.timezone):
+                        schedule_time = next_sales_window.format("HH:mm")
+                        schedule_name = item["display_name"] + " " + schedule_time
+
+                        global scheduled_jobs
+                        if not any(d["name"] == schedule_name for d in scheduled_jobs):
+                            job = (
+                                schedule.every()
+                                .day.at(next_sales_window.shift(minutes=-1).format("HH:mm"))
+                                .do(trigger_intense_fetch)
+                            )
+                            scheduled_jobs.append({"name": schedule_name, "job": job})
+                            logger.info(
+                                "Added new automatic intense fetch run for "
+                                + item["display_name"]
+                                + " at "
+                                + schedule_time
+                                + " today"
+                            )
+
+        logger.debug("Scheduled automatic intense jobs: " + str(scheduled_jobs))
+
+        now = datetime.now()
+        cron = croniter("0 8,11,14,17,20 * * *", now)
+        next_run = cron.get_next(datetime)
+        sleep_seconds = (next_run - now).seconds
+        sleep(sleep_seconds)
+
+
+def trigger_intense_fetch():
+    logger.info("Running automatic intense fetch!")
+    mqtt_client.publish(
+        f"homeassistant/switch/toogoodtogo_intense_fetch/set",
+        "ON",
+    )
+    return schedule.CancelJob
 
 
 def ua_check_loop():
@@ -513,6 +573,12 @@ def register_fetch_sensor():
     )
 
 
+def run_pending_schedules():
+    while True:
+        schedule.run_pending()
+        time.sleep(1)
+
+
 def start():
     global tgtg_client, watchdog, mqtt_client
     tgtg_client = TgtgClient(
@@ -539,6 +605,9 @@ def start():
     mqtt_client.loop_start()
     event = threading.Event()
     thread = threading.Thread(target=fetch_loop, args=(event,))
+    thread.start()
+
+    thread = threading.Thread(target=run_pending_schedules)
     thread.start()
 
     thread = threading.Thread(target=ua_check_loop)
