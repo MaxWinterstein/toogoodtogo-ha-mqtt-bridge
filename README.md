@@ -20,7 +20,7 @@ Docker image is created automatically and available at dockerhub: [maxwinterstei
 
 ### Native
 
-- Create some virtualenv (or what you personally prefer) with at least python 3.7
+- Create some virtualenv (or what you personally prefer) with at least python 3.9
 - Install requirements `pip install -r requirements.txt`
 - Install TooGoodToGoo Home Assistant Mqtt Bridge `pip install .`
 
