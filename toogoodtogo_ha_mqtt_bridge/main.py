@@ -33,6 +33,7 @@ tgtg_client: MyTgtgClient = None
 tgtg_version = None
 intense_fetch_thread = None
 tokens = {}
+tokens_rev = 1  # in case of tokens.json changes, bump this
 watchdog: Watchdog = None
 watchdog_timeout = 0
 favourite_ids = []
@@ -200,6 +201,10 @@ def is_latest_version():
         return True
 
 
+def is_latest_token_rev():
+    return tokens["rev"] >= tokens_rev
+
+
 def write_token_file():
     global tokens
     tgtg_tokens = {
@@ -211,11 +216,12 @@ def write_token_file():
         "ua": tgtg_client.user_agent,
         "token_version": tgtg_version,
         "cookie_datadome": tgtg_client.cookie_datadome,
+        "rev": tokens_rev,
     }
     tokens = tgtg_tokens
 
     with open(settings.get("data_dir") + "/tokens.json", "w") as json_file:
-        json.dump(tgtg_tokens, json_file)
+        json.dump(tgtg_tokens, json_file, indent=4)
 
     logger.info("Written tokens.json file to filesystem")
 
@@ -228,6 +234,11 @@ def check_existing_token_file():
         return False
 
 
+def nuke_token_file():
+    logger.info("Old tokenfile found. Please login via email again.")
+    os.remove(settings.get("data_dir") + "/tokens.json")
+
+
 def read_token_file():
     global tokens
     with open(settings.get("data_dir") + "/tokens.json") as f:
@@ -235,9 +246,11 @@ def read_token_file():
 
     if tokens:
         if first_run:
-            if "ua" not in tokens or "token_version" not in tokens:
-                logger.info("Old tokenfile found. Please login via email again.")
-                os.remove(settings.get("data_dir") + "/tokens.json")
+            if "ua" not in tokens or "token_version" not in tokens or "rev" not in tokens:
+                nuke_token_file()
+                return False
+            elif not is_latest_token_rev():
+                nuke_token_file()
                 return False
 
         if not is_latest_version():
