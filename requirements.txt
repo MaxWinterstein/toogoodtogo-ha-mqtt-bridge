@@ -28,13 +28,10 @@ packaging==23.0
     # via -r requirements.in
 paho-mqtt==1.6.1
     # via -r requirements.in
-<<<<<<< HEAD
-=======
 pyparsing==3.0.9
     # via packaging
 pyreadline3==3.4.1
     # via humanfriendly
->>>>>>> b4d11dd (Add automatic intense fetch based on tgtg item data)
 python-dateutil==2.8.2
     # via
     #   arrow
