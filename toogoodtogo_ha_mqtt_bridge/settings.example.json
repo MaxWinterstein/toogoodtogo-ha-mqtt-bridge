@@ -3,7 +3,13 @@
     "host": "homeassistant.local",
     "port": 1883,
     "username": "mqtt",
-    "password": "mqtt"
+    "password": "mqtt",
+    "base": "toogoodtogo"
+  },
+  "homeassistant": {
+    "enabled": true,
+    "base": "homeassistant",
+    "name_prefix": "TooGoodToGo - "
   },
   "tgtg": {
     "email": "me@example.com",
