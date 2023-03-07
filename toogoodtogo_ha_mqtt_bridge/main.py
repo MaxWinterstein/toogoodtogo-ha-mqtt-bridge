@@ -66,7 +66,7 @@ def check():
         if homeassistant_enabled:
             # Autodiscover
             result_ad = mqtt_client.publish(
-                f"{homeassistant_base}/sensor/toogoodtogo_bridge/{item_id}/config",
+                f"{homeassistant_base}/sensor/toogoodtogo_bridge/favorites/{item_id}/config",
                 json.dumps(
                     {
                         "name": f"{homeassistant_name_prefix}{shop['display_name']}",
@@ -82,6 +82,7 @@ def check():
                             "name": "Too Good To Go",
                         },
                         "unique_id": f"toogoodtogo_{item_id}",
+                        "object_id": f"toogoodtogo_{item_id}"
                     }
                 ),
             )
