@@ -315,7 +315,9 @@ def check_for_removed_stores(shops: []):
             deprecated_items = [x for x in known_items if x not in checked_items]
             for deprecated_item in deprecated_items:
                 logger.info(f"Shop {deprecated_item} was not checked, will send remove message")
-                result = mqtt_client.publish(f"{homeassistant_base}/sensor/toogoodtogo_{deprecated_item}/config")
+                result = mqtt_client.publish(
+                    f"{homeassistant_base}/sensor/toogoodtogo_{deprecated_item}/config"
+                )
                 logger.debug(f"Message published: Removal: {bool(result.rc == mqtt.MQTT_ERR_SUCCESS)}")
 
     json.dump(checked_items, open(path, "w"))

@@ -1,10 +1,10 @@
 {
   "mqtt": {
-    "base" : "toogoodtogo"
+    "base": "toogoodtogo"
   },
   "homeassistant": {
     "enabled": true,
-    "base" : "homeassistant",
+    "base": "homeassistant",
     "name_prefix": "TooGoodToGo - "
   },
   "timezone": "Europe/Berlin",
