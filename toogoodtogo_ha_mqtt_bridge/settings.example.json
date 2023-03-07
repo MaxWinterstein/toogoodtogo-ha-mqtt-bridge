@@ -1,10 +1,12 @@
 {
   "mqtt": {
+    "client": "toogoodtogo-ha-mqtt-bridge",
     "host": "homeassistant.local",
     "port": 1883,
     "username": "mqtt",
     "password": "mqtt",
-    "base": "toogoodtogo"
+    "base": "toogoodtogo",
+    "raw": false
   },
   "homeassistant": {
     "enabled": true,

@@ -1,6 +1,8 @@
 {
   "mqtt": {
-    "base": "toogoodtogo"
+    "client": "toogoodtogo-ha-mqtt-bridge",
+    "base": "toogoodtogo",
+    "raw": false
   },
   "homeassistant": {
     "enabled": true,

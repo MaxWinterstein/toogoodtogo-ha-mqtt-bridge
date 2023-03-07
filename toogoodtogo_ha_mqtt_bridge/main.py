@@ -41,6 +41,7 @@ watchdog_timeout = 0
 favourite_ids = []
 scheduled_jobs = []
 mqtt_base = settings.mqtt.base
+mqtt_raw = settings.mqtt.raw
 homeassistant_enabled = settings.homeassistant.enabled
 homeassistant_base = settings.homeassistant.base
 homeassistant_name_prefix = settings.homeassistant.name_prefix
@@ -63,10 +64,16 @@ def check():
 
         logger.debug(f"Pushing message for {shop['display_name']} // {item_id}")
 
+        if mqtt_raw:
+            mqtt_client.publish(
+                f"{mqtt_base}/favorites/{item_id}/raw",
+                json.dumps(shop),
+            )
+
         if homeassistant_enabled:
             # Autodiscover
             result_ad = mqtt_client.publish(
-                f"{homeassistant_base}/sensor/toogoodtogo_bridge/favorites/{item_id}/config",
+                f"{homeassistant_base}/sensor/toogoodtogo/favorites/{item_id}/config",
                 json.dumps(
                     {
                         "name": f"{homeassistant_name_prefix}{shop['display_name']}",
@@ -316,7 +323,7 @@ def check_for_removed_stores(shops: []):
             for deprecated_item in deprecated_items:
                 logger.info(f"Shop {deprecated_item} was not checked, will send remove message")
                 result = mqtt_client.publish(
-                    f"{homeassistant_base}/sensor/toogoodtogo_{deprecated_item}/config"
+                    f"{homeassistant_base}/sensor/toogoodtogo/favorite/{deprecated_item}/config"
                 )
                 logger.debug(f"Message published: Removal: {bool(result.rc == mqtt.MQTT_ERR_SUCCESS)}")
 
@@ -392,7 +399,7 @@ def next_sales_loop():
 def trigger_intense_fetch():
     logger.info("Running automatic intense fetch!")
     mqtt_client.publish(
-        f"{mqtt_base}/toogoodtogo_intense_fetch/set",
+        f"{mqtt_base}/intense_fetch/set",
         "ON",
     )
     return schedule.CancelJob
@@ -525,7 +532,7 @@ def intense_fetch():
         return None
 
     mqtt_client.publish(
-        f"{mqtt_base}/toogoodtogo_intense_fetch/state",
+        f"{mqtt_base}/intense_fetch/state",
         "ON",
     )
 
@@ -544,7 +551,7 @@ def intense_fetch():
     intense_fetch_thread = None
 
     mqtt_client.publish(
-        f"{mqtt_base}/toogoodtogo_intense_fetch/state",
+        f"{mqtt_base}/intense_fetch/state",
         "OFF",
     )
 
@@ -553,7 +560,7 @@ def intense_fetch():
 
 def on_message(client, userdata, message):
     global intense_fetch_thread
-    if message.topic.endswith("toogoodtogo_intense_fetch/set"):
+    if message.topic.endswith("intense_fetch/set"):
         if message.payload.decode("utf-8") == "ON":
             if intense_fetch_thread:
                 logger.error("Intense fetch thread already running. Doing nothing.")
@@ -567,7 +574,7 @@ def on_message(client, userdata, message):
                 intense_fetch_thread.do_run = False
                 logger.info("Intense fetch is stopped in the next cycle.")
                 mqtt_client.publish(
-                    f"{mqtt_base}/toogoodtogo_intense_fetch/state",
+                    f"{mqtt_base}/intense_fetch/state",
                     "OFF",
                 )
             else:
@@ -577,13 +584,13 @@ def on_message(client, userdata, message):
 def register_fetch_sensor():
     if homeassistant_enabled:
         mqtt_client.publish(
-            f"{homeassistant_base}/switch/toogoodtogo_bridge/intense_fetch/config",
+            f"{homeassistant_base}/switch/toogoodtogo/intense_fetch/config",
             json.dumps(
                 {
                     "name": "Intense fetch",
                     "icon": "mdi:fast-forward",
-                    "state_topic": f"{mqtt_base}/toogoodtogo_intense_fetch/state",
-                    "command_topic": f"{mqtt_base}/toogoodtogo_intense_fetch/set",
+                    "state_topic": f"{mqtt_base}/intense_fetch/state",
+                    "command_topic": f"{mqtt_base}/intense_fetch/set",
                     "device": {
                         "identifiers": ["toogoodtogo_bridge"],
                         "manufacturer": "Max Winterstein",
@@ -596,7 +603,7 @@ def register_fetch_sensor():
         )
 
     mqtt_client.publish(
-        f"{mqtt_base}/toogoodtogo_intense_fetch/state",
+        f"{mqtt_base}/intense_fetch/state",
         "OFF",
     )
 
@@ -619,14 +626,14 @@ def start():
     )
 
     logger.info("Connecting mqtt")
-    mqtt_client = mqtt.Client("toogoodtogo-ha-mqtt-bridge")
+    mqtt_client = mqtt.Client(mqtt_client)
     if settings.mqtt.username:
         mqtt_client.username_pw_set(username=settings.mqtt.username, password=settings.mqtt.password)
     mqtt_client.connect(host=settings.mqtt.host, port=int(settings.mqtt.port))
     mqtt_client.on_disconnect = on_disconnect
 
     if "intense_fetch" in settings.tgtg:
-        mqtt_client.subscribe(f"{mqtt_base}/toogoodtogo_intense_fetch/set")
+        mqtt_client.subscribe(f"{mqtt_base}/intense_fetch/set")
         register_fetch_sensor()
         mqtt_client.on_message = on_message
 
