@@ -82,7 +82,7 @@ def check():
                             "name": "Too Good To Go",
                         },
                         "unique_id": f"toogoodtogo_{item_id}",
-                        "object_id": f"toogoodtogo_{item_id}"
+                        "object_id": f"toogoodtogo_{item_id}",
                     }
                 ),
             )
