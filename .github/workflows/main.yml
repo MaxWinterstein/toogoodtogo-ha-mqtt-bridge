@@ -30,5 +30,5 @@ jobs:
           platforms: linux/amd64,linux/arm/v7,linux/arm64
           push: true
           tags: |
-            maxwinterstein/toogoodtogo-ha-mqtt-bridge:${{ github.event.inputs.version }}
-            maxwinterstein/toogoodtogo-ha-mqtt-bridge:latest
+            bdbogjoe/toogoodtogo-ha-mqtt-bridge:${{ github.event.inputs.version }}
+            bdbogjoe/toogoodtogo-ha-mqtt-bridge:latest
