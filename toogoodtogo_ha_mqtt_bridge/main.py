@@ -73,7 +73,7 @@ def check():
         if homeassistant_enabled:
             # Autodiscover
             result_ad = mqtt_client.publish(
-                f"{homeassistant_base}/sensor/toogoodtogo/favorites/{item_id}/config",
+                f"{homeassistant_base}/sensor/toogoodtogo_favorites_{item_id}/config",
                 json.dumps(
                     {
                         "name": f"{homeassistant_name_prefix}{shop['display_name']}",
@@ -323,7 +323,7 @@ def check_for_removed_stores(shops: []):
             for deprecated_item in deprecated_items:
                 logger.info(f"Shop {deprecated_item} was not checked, will send remove message")
                 result = mqtt_client.publish(
-                    f"{homeassistant_base}/sensor/toogoodtogo/favorite/{deprecated_item}/config"
+                    f"{homeassistant_base}/sensor/toogoodtogo_favorites_{deprecated_item}/config"
                 )
                 logger.debug(f"Message published: Removal: {bool(result.rc == mqtt.MQTT_ERR_SUCCESS)}")
 
@@ -584,7 +584,7 @@ def on_message(client, userdata, message):
 def register_fetch_sensor():
     if homeassistant_enabled:
         mqtt_client.publish(
-            f"{homeassistant_base}/switch/toogoodtogo/intense_fetch/config",
+            f"{homeassistant_base}/switch/toogoodtogo_intense_fetch/config",
             json.dumps(
                 {
                     "name": "Intense fetch",
@@ -598,6 +598,7 @@ def register_fetch_sensor():
                         "name": "Too Good To Go",
                     },
                     "unique_id": f"toogoodtogo_intense_fetch_switch",
+                    "object_id": f"toogoodtogo_intense_fetch_switch",
                 }
             ),
         )
