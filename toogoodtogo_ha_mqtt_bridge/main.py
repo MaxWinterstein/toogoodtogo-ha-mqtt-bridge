@@ -40,6 +40,11 @@ watchdog: Watchdog | None = None
 watchdog_timeout = 0
 favourite_ids = []
 scheduled_jobs = []
+mqtt_base = settings.mqtt.base
+mqtt_raw = settings.mqtt.raw
+homeassistant_enabled = settings.homeassistant.enabled
+homeassistant_base = settings.homeassistant.base
+homeassistant_name_prefix = settings.homeassistant.name_prefix
 
 
 def check():
@@ -59,30 +64,38 @@ def check():
 
         logger.debug(f"Pushing message for {shop['display_name']} // {item_id}")
 
-        # Autodiscover
-        result_ad = mqtt_client.publish(
-            f"homeassistant/sensor/toogoodtogo_bridge/{item_id}/config",
-            json.dumps(
-                {
-                    "name": f"TooGoodToGo - {shop['display_name']}",
-                    "icon": "mdi:food" if stock > 0 else "mdi:food-off",
-                    "state_topic": f"homeassistant/sensor/toogoodtogo_{item_id}/state",
-                    "json_attributes_topic": f"homeassistant/sensor/toogoodtogo_{item_id}/attr",
-                    "unit_of_measurement": "portions",
-                    "value_template": "{{ value_json.stock }}",
-                    "device": {
-                        "identifiers": ["toogoodtogo_bridge"],
-                        "manufacturer": "Max Winterstein",
-                        "model": "TooGoodToGo favorites",
-                        "name": "Too Good To Go",
-                    },
-                    "unique_id": f"toogoodtogo_{item_id}",
-                }
-            ),
-        )
+        if mqtt_raw:
+            mqtt_client.publish(
+                f"{mqtt_base}/favorites/{item_id}/raw",
+                json.dumps(shop),
+            )
+
+        if homeassistant_enabled:
+            # Autodiscover
+            result_ad = mqtt_client.publish(
+                f"{homeassistant_base}/sensor/toogoodtogo_favorites_{item_id}/config",
+                json.dumps(
+                    {
+                        "name": f"{homeassistant_name_prefix}{shop['display_name']}",
+                        "icon": "mdi:food" if stock > 0 else "mdi:food-off",
+                        "state_topic": f"{mqtt_base}/favorites/{item_id}/state",
+                        "json_attributes_topic": f"{mqtt_base}/favorites/{item_id}/attr",
+                        "unit_of_measurement": "portions",
+                        "value_template": "{{ value_json.stock }}",
+                        "device": {
+                            "identifiers": ["toogoodtogo_bridge"],
+                            "manufacturer": "Max Winterstein",
+                            "model": "TooGoodToGo favorites",
+                            "name": "Too Good To Go",
+                        },
+                        "unique_id": f"toogoodtogo_{item_id}",
+                        "object_id": f"toogoodtogo_{item_id}",
+                    }
+                ),
+            )
 
         result_state = mqtt_client.publish(
-            f"homeassistant/sensor/toogoodtogo_{item_id}/state",
+            f"{mqtt_base}/favorites/{item_id}/state",
             json.dumps({"stock": stock}),
         )
 
@@ -125,7 +138,7 @@ def check():
                 picture = "https://toogoodtogo.com/images/logo/econ-textless.svg"
 
         result_attrs = mqtt_client.publish(
-            f"homeassistant/sensor/toogoodtogo_{item_id}/attr",
+            f"{mqtt_base}/favorites/{item_id}/attr",
             json.dumps(
                 {
                     "price": price,
@@ -305,11 +318,14 @@ def check_for_removed_stores(shops: []):
             logger.error("Error happened when reading known_shops file")
             return
 
-        deprecated_items = [x for x in known_items if x not in checked_items]
-        for deprecated_item in deprecated_items:
-            logger.info(f"Shop {deprecated_item} was not checked, will send remove message")
-            result = mqtt_client.publish(f"homeassistant/sensor/toogoodtogo_{deprecated_item}/config")
-            logger.debug(f"Message published: Removal: {bool(result.rc == mqtt.MQTT_ERR_SUCCESS)}")
+        if homeassistant_enabled:
+            deprecated_items = [x for x in known_items if x not in checked_items]
+            for deprecated_item in deprecated_items:
+                logger.info(f"Shop {deprecated_item} was not checked, will send remove message")
+                result = mqtt_client.publish(
+                    f"{homeassistant_base}/sensor/toogoodtogo_favorites_{deprecated_item}/config"
+                )
+                logger.debug(f"Message published: Removal: {bool(result.rc == mqtt.MQTT_ERR_SUCCESS)}")
 
     json.dump(checked_items, open(path, "w"))
 
@@ -383,7 +399,7 @@ def next_sales_loop():
 def trigger_intense_fetch():
     logger.info("Running automatic intense fetch!")
     mqtt_client.publish(
-        f"homeassistant/switch/toogoodtogo_intense_fetch/set",
+        f"{mqtt_base}/intense_fetch/set",
         "ON",
     )
     return schedule.CancelJob
@@ -516,7 +532,7 @@ def intense_fetch():
         return None
 
     mqtt_client.publish(
-        f"homeassistant/switch/toogoodtogo_intense_fetch/state",
+        f"{mqtt_base}/intense_fetch/state",
         "ON",
     )
 
@@ -535,7 +551,7 @@ def intense_fetch():
     intense_fetch_thread = None
 
     mqtt_client.publish(
-        f"homeassistant/switch/toogoodtogo_intense_fetch/state",
+        f"{mqtt_base}/intense_fetch/state",
         "OFF",
     )
 
@@ -544,7 +560,7 @@ def intense_fetch():
 
 def on_message(client, userdata, message):
     global intense_fetch_thread
-    if message.topic.endswith("toogoodtogo_intense_fetch/set"):
+    if message.topic.endswith("intense_fetch/set"):
         if message.payload.decode("utf-8") == "ON":
             if intense_fetch_thread:
                 logger.error("Intense fetch thread already running. Doing nothing.")
@@ -558,7 +574,7 @@ def on_message(client, userdata, message):
                 intense_fetch_thread.do_run = False
                 logger.info("Intense fetch is stopped in the next cycle.")
                 mqtt_client.publish(
-                    f"homeassistant/switch/toogoodtogo_intense_fetch/state",
+                    f"{mqtt_base}/intense_fetch/state",
                     "OFF",
                 )
             else:
@@ -566,27 +582,29 @@ def on_message(client, userdata, message):
 
 
 def register_fetch_sensor():
-    mqtt_client.publish(
-        f"homeassistant/switch/toogoodtogo_bridge/intense_fetch/config",
-        json.dumps(
-            {
-                "name": "Intense fetch",
-                "icon": "mdi:fast-forward",
-                "state_topic": "homeassistant/switch/toogoodtogo_intense_fetch/state",
-                "command_topic": "homeassistant/switch/toogoodtogo_intense_fetch/set",
-                "device": {
-                    "identifiers": ["toogoodtogo_bridge"],
-                    "manufacturer": "Max Winterstein",
-                    "model": "TooGoodToGo favorites",
-                    "name": "Too Good To Go",
-                },
-                "unique_id": f"toogoodtogo_intense_fetch_switch",
-            }
-        ),
-    )
+    if homeassistant_enabled:
+        mqtt_client.publish(
+            f"{homeassistant_base}/switch/toogoodtogo_intense_fetch/config",
+            json.dumps(
+                {
+                    "name": "Intense fetch",
+                    "icon": "mdi:fast-forward",
+                    "state_topic": f"{mqtt_base}/intense_fetch/state",
+                    "command_topic": f"{mqtt_base}/intense_fetch/set",
+                    "device": {
+                        "identifiers": ["toogoodtogo_bridge"],
+                        "manufacturer": "Max Winterstein",
+                        "model": "TooGoodToGo favorites",
+                        "name": "Too Good To Go",
+                    },
+                    "unique_id": f"toogoodtogo_intense_fetch_switch",
+                    "object_id": f"toogoodtogo_intense_fetch_switch",
+                }
+            ),
+        )
 
     mqtt_client.publish(
-        f"homeassistant/switch/toogoodtogo_intense_fetch/state",
+        f"{mqtt_base}/intense_fetch/state",
         "OFF",
     )
 
@@ -609,14 +627,14 @@ def start():
     )
 
     logger.info("Connecting mqtt")
-    mqtt_client = mqtt.Client("toogoodtogo-ha-mqtt-bridge")
+    mqtt_client = mqtt.Client(mqtt_client)
     if settings.mqtt.username:
         mqtt_client.username_pw_set(username=settings.mqtt.username, password=settings.mqtt.password)
     mqtt_client.connect(host=settings.mqtt.host, port=int(settings.mqtt.port))
     mqtt_client.on_disconnect = on_disconnect
 
     if "intense_fetch" in settings.tgtg:
-        mqtt_client.subscribe("homeassistant/switch/toogoodtogo_intense_fetch/set")
+        mqtt_client.subscribe(f"{mqtt_base}/intense_fetch/set")
         register_fetch_sensor()
         mqtt_client.on_message = on_message
 

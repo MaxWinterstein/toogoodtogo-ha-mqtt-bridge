@@ -1,4 +1,14 @@
 {
+  "mqtt": {
+    "client": "toogoodtogo-ha-mqtt-bridge",
+    "base": "toogoodtogo",
+    "raw": false
+  },
+  "homeassistant": {
+    "enabled": true,
+    "base": "homeassistant",
+    "name_prefix": "TooGoodToGo - "
+  },
   "timezone": "Europe/Berlin",
   "locale": "en_us",
   "cleanup": true,
