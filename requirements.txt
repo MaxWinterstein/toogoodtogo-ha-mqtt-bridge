@@ -37,7 +37,7 @@ random-user-agent==1.0.1
     # via -r requirements.in
 requests==2.28.0
     # via tgtg
-schedule==1.1.0
+schedule==1.2.0
     # via -r requirements.in
 six==1.16.0
     # via python-dateutil
