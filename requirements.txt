@@ -22,7 +22,7 @@ google-play-scraper==1.2.3
     # via -r requirements.in
 humanfriendly==10.0
     # via coloredlogs
-idna==3.3
+idna==3.7
     # via requests
 packaging==23.0
     # via -r requirements.in
