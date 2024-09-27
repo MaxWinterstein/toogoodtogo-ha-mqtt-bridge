@@ -1,15 +1,26 @@
 {
   "mqtt": {
+    "client": "toogoodtogo-ha-mqtt-bridge",
     "host": "homeassistant.local",
     "port": 1883,
     "username": "mqtt",
-    "password": "mqtt"
+    "password": "mqtt",
+    "base": "toogoodtogo",
+    "raw": false
+  },
+  "homeassistant": {
+    "enabled": true,
+    "base": "homeassistant",
+    "name_prefix": "TooGoodToGo - "
   },
   "tgtg": {
     "email": "me@example.com",
     "language": "en-US",
     "polling_schedule": "*/10 * * * *",
-    "intense_fetch": { "interval": 30, "period_of_time": 5 }
+    "intense_fetch": {
+      "interval": 30,
+      "period_of_time": 5
+    }
   },
   "timezone": "Europe/Berlin",
   "locale": "en_us"
