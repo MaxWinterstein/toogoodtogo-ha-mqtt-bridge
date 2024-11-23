@@ -41,7 +41,7 @@ schedule==1.1.0
     # via -r requirements.in
 six==1.16.0
     # via python-dateutil
-tenacity==8.2.2
+tenacity==8.5.0
     # via -r requirements.in
 tgtg==0.13.2
     # via -r requirements.in
