@@ -28,7 +28,7 @@ packaging==23.0
     # via -r requirements.in
 paho-mqtt==1.6.1
     # via -r requirements.in
-python-dateutil==2.8.2
+python-dateutil==2.9.0.post0
     # via
     #   arrow
     #   croniter
