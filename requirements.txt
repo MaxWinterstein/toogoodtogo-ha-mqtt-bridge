@@ -24,7 +24,7 @@ humanfriendly==10.0
     # via coloredlogs
 idna==3.3
     # via requests
-packaging==23.0
+packaging==23.2
     # via -r requirements.in
 paho-mqtt==1.6.1
     # via -r requirements.in
