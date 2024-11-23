@@ -8,7 +8,7 @@ arrow==1.2.3
     # via -r requirements.in
 certifi==2022.12.7
     # via requests
-charset-normalizer==2.0.12
+charset-normalizer==2.1.1
     # via requests
 coloredlogs==15.0.1
     # via -r requirements.in
