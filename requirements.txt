@@ -35,7 +35,7 @@ python-dateutil==2.8.2
     #   freezegun
 random-user-agent==1.0.1
     # via -r requirements.in
-requests==2.28.0
+requests==2.32.2
     # via tgtg
 schedule==1.1.0
     # via -r requirements.in
