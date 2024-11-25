@@ -40,8 +40,7 @@ class MyTgtgClient(TgtgClient):
     def _refresh_token(self):
         if (
             self.last_time_token_refreshed
-            and (datetime.datetime.now() - self.last_time_token_refreshed).seconds
-            <= self.access_token_lifetime
+            and (datetime.datetime.now() - self.last_time_token_refreshed).seconds <= self.access_token_lifetime
         ):
             return
 
@@ -94,7 +93,5 @@ class MyTgtgClient(TgtgClient):
                     raise TgtgAPIError(response.status_code, "Too many requests. Try again later.")
                 else:
                     raise TgtgLoginError(response.status_code, response.content)
-
-        raise TgtgPollingError(
-            f"Max retries ({MAX_POLLING_TRIES * POLLING_WAIT_TIME} seconds) reached. Try again."
-        )
+        msg = f"Max retries ({MAX_POLLING_TRIES * POLLING_WAIT_TIME} seconds) reached. Try again."
+        raise TgtgPollingError(msg)
