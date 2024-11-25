@@ -31,8 +31,5 @@ def test_calc_next_run(_time, _cron, expected):
     present = arrow.utcnow()
     future = present.shift(seconds=sleep_seconds)
     print(f'Would sleep {present.humanize(future, granularity=["hour", "minute"])}')
-    assert (
-        expected_date
-        <= time_date + dt.timedelta(seconds=sleep_seconds)
-        <= expected_date + dt.timedelta(seconds=20)
-    )
+    if not expected_date <= time_date + dt.timedelta(seconds=sleep_seconds) <= expected_date + dt.timedelta(seconds=20):
+        raise RuntimeError("Next runtime seems off")  # noqa: TRY003

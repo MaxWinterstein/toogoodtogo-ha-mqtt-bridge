@@ -11,6 +11,7 @@ from pathlib import Path
 from time import sleep
 
 import arrow
+import click
 import coloredlogs
 import paho.mqtt.client as mqtt
 import schedule
@@ -62,23 +63,21 @@ def check():
         # Autodiscover
         result_ad = mqtt_client.publish(
             f"homeassistant/sensor/toogoodtogo_bridge/{item_id}/config",
-            json.dumps(
-                {
-                    "name": f"TooGoodToGo - {shop['display_name']}",
-                    "icon": "mdi:food" if stock > 0 else "mdi:food-off",
-                    "state_topic": f"homeassistant/sensor/toogoodtogo_{item_id}/state",
-                    "json_attributes_topic": f"homeassistant/sensor/toogoodtogo_{item_id}/attr",
-                    "unit_of_measurement": "portions",
-                    "value_template": "{{ value_json.stock }}",
-                    "device": {
-                        "identifiers": ["toogoodtogo_bridge"],
-                        "manufacturer": "Max Winterstein",
-                        "model": "TooGoodToGo favorites",
-                        "name": "Too Good To Go",
-                    },
-                    "unique_id": f"toogoodtogo_{item_id}",
-                }
-            ),
+            json.dumps({
+                "name": f"TooGoodToGo - {shop['display_name']}",
+                "icon": "mdi:food" if stock > 0 else "mdi:food-off",
+                "state_topic": f"homeassistant/sensor/toogoodtogo_{item_id}/state",
+                "json_attributes_topic": f"homeassistant/sensor/toogoodtogo_{item_id}/attr",
+                "unit_of_measurement": "portions",
+                "value_template": "{{ value_json.stock }}",
+                "device": {
+                    "identifiers": ["toogoodtogo_bridge"],
+                    "manufacturer": "Max Winterstein",
+                    "model": "TooGoodToGo favorites",
+                    "name": "Too Good To Go",
+                },
+                "unique_id": f"toogoodtogo_{item_id}",
+            }),
         )
 
         result_state = mqtt_client.publish(
@@ -97,18 +96,12 @@ def check():
             logger.error("Can't find price")
             price = 0
 
-        pickup_start_date = (
-            None if not stock else arrow.get(shop["pickup_interval"]["start"]).to(tz=settings.timezone)
-        )
-        pickup_end_date = (
-            None if not stock else arrow.get(shop["pickup_interval"]["end"]).to(tz=settings.timezone)
-        )
+        pickup_start_date = None if not stock else arrow.get(shop["pickup_interval"]["start"]).to(tz=settings.timezone)
+        pickup_end_date = None if not stock else arrow.get(shop["pickup_interval"]["end"]).to(tz=settings.timezone)
         pickup_start_str = ("Unknown" if stock == 0 else pickup_start_date.to(tz=settings.timezone).format(),)
         pickup_end_str = ("Unknown" if stock == 0 else pickup_end_date.to(tz=settings.timezone).format(),)
         pickup_start_human = (
-            "Unknown"
-            if stock == 0
-            else pickup_start_date.humanize(only_distance=False, locale=settings.locale)
+            "Unknown" if stock == 0 else pickup_start_date.humanize(only_distance=False, locale=settings.locale)
         )
         pickup_end_human = (
             "Unknown" if stock == 0 else pickup_end_date.humanize(only_distance=False, locale=settings.locale)
@@ -126,18 +119,16 @@ def check():
 
         result_attrs = mqtt_client.publish(
             f"homeassistant/sensor/toogoodtogo_{item_id}/attr",
-            json.dumps(
-                {
-                    "price": price,
-                    "stock_available": True if stock > 0 else False,
-                    "url": f"https://share.toogoodtogo.com/item/{item_id}",
-                    "pickup_start": pickup_start_str,
-                    "pickup_start_human": pickup_start_human,
-                    "pickup_end": pickup_end_str,
-                    "pickup_end_human": pickup_end_human,
-                    "picture": picture,
-                }
-            ),
+            json.dumps({
+                "price": price,
+                "stock_available": True if stock > 0 else False,
+                "url": f"https://share.toogoodtogo.com/item/{item_id}",
+                "pickup_start": pickup_start_str,
+                "pickup_start_human": pickup_start_human,
+                "pickup_end": pickup_end_str,
+                "pickup_end_human": pickup_end_human,
+                "picture": picture,
+            }),
         )
         logger.debug(
             f"Message published: Autodiscover: {bool(result_ad.rc == mqtt.MQTT_ERR_SUCCESS)}, "
@@ -178,11 +169,8 @@ def is_latest_version():
     logger.info("Checking latest tgtg appstore version")
     try:
         app_info = app("com.app.tgtg", lang="de", country="de")
-    except Exception as ex:
-        logger.error(
-            "Error getting version ID from google playstore. Skipping version check this time. "
-            "Exception was: " + str(ex)
-        )
+    except Exception:
+        logger.exception("Error getting version ID from google playstore. Skipping version check this time.")
         return True
 
     act_version = version.parse(app_info["version"])
@@ -190,10 +178,7 @@ def is_latest_version():
 
     # Fix for users having already a tokens.json contain 'Varies with device'
     # see https://github.com/MaxWinterstein/toogoodtogo-ha-mqtt-bridge/issues/87
-    if str(token_version) == "Varies with device":
-        minor_diff = 999
-    else:
-        minor_diff = act_version.minor - token_version.minor
+    minor_diff = 999 if str(token_version) == "Varies with device" else act_version.minor - token_version.minor
 
     if minor_diff > 2 or act_version.major > token_version.major:
         global tgtg_version
@@ -247,13 +232,11 @@ def read_token_file():
         tokens = json.load(f)
 
     if tokens:
-        if first_run:
-            if "ua" not in tokens or "token_version" not in tokens or "rev" not in tokens:
-                nuke_token_file()
-                return False
-            elif not is_latest_token_rev():
-                nuke_token_file()
-                return False
+        if first_run and (
+            "ua" not in tokens or "token_version" not in tokens or "rev" not in tokens or not is_latest_token_rev()
+        ):
+            nuke_token_file()
+            return False
 
         if not is_latest_version():
             logger.info("Token for old TGTG version found, updating useragent.")
@@ -300,9 +283,10 @@ def check_for_removed_stores(shops: []):
     if os.path.isfile(path):
         logger.debug(f"known_shops.json exists at {path}")
         try:
-            known_items = json.load(open(path, "r"))
-        except:
-            logger.error("Error happened when reading known_shops file")
+            with open(path) as f:
+                known_items = json.load(f)
+        except (OSError, json.JSONDecodeError):
+            logger.exception("Error happened when reading known_shops file")
             return
 
         deprecated_items = [x for x in known_items if x not in checked_items]
@@ -311,7 +295,8 @@ def check_for_removed_stores(shops: []):
             result = mqtt_client.publish(f"homeassistant/sensor/toogoodtogo_{deprecated_item}/config")
             logger.debug(f"Message published: Removal: {bool(result.rc == mqtt.MQTT_ERR_SUCCESS)}")
 
-    json.dump(checked_items, open(path, "w"))
+    with open(path, "w") as f:
+        json.dump(checked_items, f)
 
     pass
 
@@ -348,9 +333,7 @@ def next_sales_loop():
             for fav_id in favourite_ids:
                 item = tgtg_client.get_item(item_id=fav_id)
                 if "next_sales_window_purchase_start" in item:
-                    next_sales_window = arrow.get(item["next_sales_window_purchase_start"]).to(
-                        tz=settings.timezone
-                    )
+                    next_sales_window = arrow.get(item["next_sales_window_purchase_start"]).to(tz=settings.timezone)
                     if next_sales_window > arrow.now(tz=settings.timezone):
                         schedule_time = next_sales_window.format("HH:mm")
                         schedule_name = item["display_name"] + " " + schedule_time
@@ -383,7 +366,7 @@ def next_sales_loop():
 def trigger_intense_fetch():
     logger.info("Running automatic intense fetch!")
     mqtt_client.publish(
-        f"homeassistant/switch/toogoodtogo_intense_fetch/set",
+        "homeassistant/switch/toogoodtogo_intense_fetch/set",
         "ON",
     )
     return schedule.CancelJob
@@ -396,10 +379,9 @@ def ua_check_loop():
         next_run = cron.get_next(datetime)
         sleep_seconds = (next_run - now).seconds
         sleep(sleep_seconds)
-        if tokens:
-            if not is_latest_version():
-                logger.info("Token for old TGTG version found, updating useragent.")
-                update_ua()
+        if tokens and not is_latest_version():
+            logger.info("Token for old TGTG version found, updating useragent.")
+            update_ua()
 
 
 def calc_next_run():
@@ -413,7 +395,7 @@ def calc_next_run():
 
         if sleep_seconds >= 30:
             if settings.get("randomize_calls"):
-                jitter = random.randint(1, 20)
+                jitter = random.randint(1, 20)  # noqa: S311 # pseudo is fine here
                 sleep_seconds += jitter
                 next_run = next_run + timedelta(seconds=jitter)
         elif sleep_seconds < 30:
@@ -463,9 +445,7 @@ def exit_from_thread(message, return_code):
 
 
 def watchdog_handler():
-    exit_from_thread(
-        "Watchdog handler fired! No pull in the last " + str(watchdog_timeout / 60) + " minutes!", 1
-    )
+    exit_from_thread("Watchdog handler fired! No pull in the last " + str(watchdog_timeout / 60) + " minutes!", 1)
 
 
 def on_disconnect(client, userdata, rc):
@@ -504,19 +484,15 @@ def intense_fetch():
         return None
 
     if settings.tgtg.intense_fetch.period_of_time > 60:
-        logger.warning(
-            "Stopped intense fetch. Maximal intense fetch period time are 60 minutes. Reduce your setting!"
-        )
+        logger.warning("Stopped intense fetch. Maximal intense fetch period time are 60 minutes. Reduce your setting!")
         return None
 
     if settings.tgtg.intense_fetch.interval < 10:
-        logger.warning(
-            "Stopped intense fetch. Minimal intense fetch interval are 10 seconds. Increase your setting!"
-        )
+        logger.warning("Stopped intense fetch. Minimal intense fetch interval are 10 seconds. Increase your setting!")
         return None
 
     mqtt_client.publish(
-        f"homeassistant/switch/toogoodtogo_intense_fetch/state",
+        "homeassistant/switch/toogoodtogo_intense_fetch/state",
         "ON",
     )
 
@@ -535,7 +511,7 @@ def intense_fetch():
     intense_fetch_thread = None
 
     mqtt_client.publish(
-        f"homeassistant/switch/toogoodtogo_intense_fetch/state",
+        "homeassistant/switch/toogoodtogo_intense_fetch/state",
         "OFF",
     )
 
@@ -558,7 +534,7 @@ def on_message(client, userdata, message):
                 intense_fetch_thread.do_run = False
                 logger.info("Intense fetch is stopped in the next cycle.")
                 mqtt_client.publish(
-                    f"homeassistant/switch/toogoodtogo_intense_fetch/state",
+                    "homeassistant/switch/toogoodtogo_intense_fetch/state",
                     "OFF",
                 )
             else:
@@ -567,26 +543,24 @@ def on_message(client, userdata, message):
 
 def register_fetch_sensor():
     mqtt_client.publish(
-        f"homeassistant/switch/toogoodtogo_bridge/intense_fetch/config",
-        json.dumps(
-            {
-                "name": "Intense fetch",
-                "icon": "mdi:fast-forward",
-                "state_topic": "homeassistant/switch/toogoodtogo_intense_fetch/state",
-                "command_topic": "homeassistant/switch/toogoodtogo_intense_fetch/set",
-                "device": {
-                    "identifiers": ["toogoodtogo_bridge"],
-                    "manufacturer": "Max Winterstein",
-                    "model": "TooGoodToGo favorites",
-                    "name": "Too Good To Go",
-                },
-                "unique_id": f"toogoodtogo_intense_fetch_switch",
-            }
-        ),
+        "homeassistant/switch/toogoodtogo_bridge/intense_fetch/config",
+        json.dumps({
+            "name": "Intense fetch",
+            "icon": "mdi:fast-forward",
+            "state_topic": "homeassistant/switch/toogoodtogo_intense_fetch/state",
+            "command_topic": "homeassistant/switch/toogoodtogo_intense_fetch/set",
+            "device": {
+                "identifiers": ["toogoodtogo_bridge"],
+                "manufacturer": "Max Winterstein",
+                "model": "TooGoodToGo favorites",
+                "name": "Too Good To Go",
+            },
+            "unique_id": "toogoodtogo_intense_fetch_switch",
+        }),
     )
 
     mqtt_client.publish(
-        f"homeassistant/switch/toogoodtogo_intense_fetch/state",
+        "homeassistant/switch/toogoodtogo_intense_fetch/state",
         "OFF",
     )
 
@@ -597,6 +571,8 @@ def run_pending_schedules():
         time.sleep(1)
 
 
+@click.command()
+@click.version_option(package_name="toogoodtogo_ha_mqtt_bridge")
 def start():
     global tgtg_client, watchdog, mqtt_client
     tgtg_client = MyTgtgClient(
