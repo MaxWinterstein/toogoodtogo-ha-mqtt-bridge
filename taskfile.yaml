@@ -1,0 +1,76 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: "3"
+
+tasks:
+  # check*
+  check:lock:
+    desc: "🔍 Checking lock file consistency with 'pyproject.toml'"
+    cmd: uv lock --locked
+
+  check:lint:
+    desc: "🔍 Linting code: Running pre-commit"
+    cmd: pre-commit run -a
+
+  check:mypy:
+    desc: "🔍 Static type checking: Running mypy"
+    cmd: mypy
+
+  check:deptry:
+    desc: "🔍 Checking for obsolete dependencies: Running deptry"
+    cmd: deptry .
+
+  check:
+    desc: "🔍 Run all checks"
+    cmds:
+      - task: check:lock
+      - task: check:lint
+      - task: check:mypy
+      - task: check:deptry
+
+  ## build:docker:*
+  build:docker:arm64:
+    desc: "🏗️ Build docker image for linux/arm64"
+    cmds:
+      - docker buildx build --platform "linux/arm64"  -t toogoodtogo_ha_mqtt_bridge:localdev-arm64 .
+
+  build:docker:amd64:
+    desc: "🏗️ Build docker image for linux/amd64"
+    cmds:
+      - docker buildx build --platform "linux/amd64" -t toogoodtogo_ha_mqtt_bridge:localdev-amd64 .
+
+  build:docker:arm7:
+    desc: "🏗️ Build docker image for linux/arm/v7"
+    cmds:
+      - docker buildx build --platform "linux/arm/v7" -t toogoodtogo_ha_mqtt_bridge:localdev-arm7 .
+
+  build:
+    desc: 🏗️ Build for all archs
+    cmds:
+      - task: build:docker:arm64
+      - task: build:docker:amd64
+      - task: build:docker:arm7
+
+  ## run:docker:*
+  run:docker:arm64:
+    desc: "▶️ Build and run for linux/arm64"
+    dir: toogoodtogo_ha_mqtt_bridge
+    deps: ["build:docker:arm64"]
+    cmd: docker run --rm -ti -v $PWD/settings.local.json:/app/settings.local.json -v $PWD/data/:/data -v /etc/localtime:/etc/localtime:ro toogoodtogo_ha_mqtt_bridge:localdev-arm64
+
+  run:docker:amd64:
+    desc: "▶️ Build and run for linux/amd64"
+    dir: toogoodtogo_ha_mqtt_bridge
+    deps: ["build:docker:amd64"]
+    cmd: docker run --rm -ti -v $PWD/settings.local.json:/app/settings.local.json -v $PWD/data/:/data -v /etc/localtime:/etc/localtime:ro toogoodtogo_ha_mqtt_bridge:localdev-amd64
+
+  run:docker:arm7:
+    desc: "▶️ Build and run for linux/arm7"
+    dir: toogoodtogo_ha_mqtt_bridge
+    deps: ["build:docker:arm7"]
+    cmd: docker run --rm -ti -v $PWD/settings.local.json:/app/settings.local.json -v $PWD/data/:/data -v /etc/localtime:/etc/localtime:ro toogoodtogo_ha_mqtt_bridge:localdev-arm7
+
+  ## run
+  run:
+    desc: "▶️ Run natively"
+    dir: toogoodtogo_ha_mqtt_bridge
+    cmd: uv run main.py
