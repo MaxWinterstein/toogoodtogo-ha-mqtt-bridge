@@ -20,9 +20,9 @@ from google_play_scraper import app
 from packaging import version
 from random_user_agent.params import SoftwareName
 from random_user_agent.user_agent import UserAgent
+from tgtg import TgtgClient
 
 from toogoodtogo_ha_mqtt_bridge.config import settings
-from toogoodtogo_ha_mqtt_bridge.mytgtgclient import MyTgtgClient
 from toogoodtogo_ha_mqtt_bridge.watchdog import Watchdog
 
 logger = logging.getLogger(__name__)
@@ -32,11 +32,11 @@ coloredlogs.install(
 
 mqtt_client: mqtt.Client | None = None
 first_run = True
-tgtg_client: MyTgtgClient | None = None
+tgtg_client: TgtgClient | None = None
 tgtg_version: str | None = None
 intense_fetch_thread = None
 tokens = {}
-tokens_rev = 1  # in case of tokens.json changes, bump this
+tokens_rev = 2  # in case of tokens.json changes, bump this
 watchdog: Watchdog | None = None
 watchdog_timeout = 0
 favourite_ids = []
@@ -198,11 +198,10 @@ def write_token_file():
         "access_token": tgtg_client.access_token,
         "access_token_lifetime": tgtg_client.access_token_lifetime,
         "refresh_token": tgtg_client.refresh_token,
-        "user_id": tgtg_client.user_id,
+        "cookie": tgtg_client.cookie,
         "last_time_token_refreshed": str(tgtg_client.last_time_token_refreshed),
         "ua": tgtg_client.user_agent,
         "token_version": tgtg_version,
-        "cookie_datadome": tgtg_client.cookie_datadome,
         "rev": tokens_rev,
     }
     tokens = tgtg_tokens
@@ -264,11 +263,10 @@ def update_ua():
 
 def rebuild_tgtg_client():
     global tgtg_client
-    tgtg_client = MyTgtgClient(
-        cookie_datadome=tokens["cookie_datadome"],
+    tgtg_client = TgtgClient(
+        cookie=tokens["cookie"],
         access_token=tokens["access_token"],
         refresh_token=tokens["refresh_token"],
-        user_id=tokens["user_id"],
         user_agent=tokens["ua"],
         language=settings.tgtg.language,
         timeout=30,
@@ -496,7 +494,7 @@ def intense_fetch():
         "ON",
     )
 
-    t = threading.currentThread()
+    t = threading.current_thread()
     t_end = time.time() + 60 * settings.tgtg.intense_fetch.period_of_time
 
     while time.time() < t_end and getattr(t, "do_run", True):
@@ -575,7 +573,7 @@ def run_pending_schedules():
 @click.version_option(package_name="toogoodtogo_ha_mqtt_bridge")
 def start():
     global tgtg_client, watchdog, mqtt_client
-    tgtg_client = MyTgtgClient(
+    tgtg_client = TgtgClient(
         email=settings.tgtg.email, language=settings.tgtg.language, timeout=30, user_agent=build_ua()
     )
 
