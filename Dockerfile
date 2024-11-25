@@ -1,19 +1,31 @@
-# inspired by https://medium.com/@harpalsahota/dockerizing-python-poetry-applications-1aa3acb76287
-FROM python:3.9
+FROM python:3.12
 
-RUN mkdir /app /data
+# renovate: datasource=github-releases depName=uv packageName=astral-sh/uv
+ENV UV_VERSION="0.5.3"
+RUN pip install uv==$UV_VERSION
+
+# Change the working directory to the `app` directory
 WORKDIR /app
 
-ENV PYTHONPATH=${PYTHONPATH}:${PWD}
-ENV CRYPTOGRAPHY_DONT_BUILD_RUST=1
-RUN pip install cryptography==3.3.2
+# Copy the lockfile and `pyproject.toml` into the image
+ADD uv.lock /app/uv.lock
+ADD pyproject.toml /app/pyproject.toml
 
-# copy requirements first to create better cache layers
-COPY requirements.txt /app/
-RUN pip install -r requirements.txt
+# Install dependencies
+RUN uv sync --frozen --no-install-project --no-dev
 
-COPY . /app/
-RUN python setup.py install
+# Copy the project into the image
+ADD . /app
 
+# Sync the project
+RUN uv sync --frozen --no-dev
+
+# Place executables in the environment at the front of the path
+ENV PATH="/app/.venv/bin:$PATH"
+
+# Poor mans test if at least the imports work
+RUN python toogoodtogo_ha_mqtt_bridge/main.py --version
+
+# Run
 ENV DYNACONF_DATA_DIR=/data
 CMD ["python", "toogoodtogo_ha_mqtt_bridge/main.py"]
