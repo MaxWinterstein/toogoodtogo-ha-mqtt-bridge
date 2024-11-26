@@ -2,27 +2,25 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": ["config:recommended"],
   "customManagers": [
-  {
-    "customType": "regex",
-    "fileMatch": [
-      "(^|/|\\.)([Dd]ocker|[Cc]ontainer)file$",
-      "(^|/)([Dd]ocker|[Cc]ontainer)file[^/]*$"
-    ],
-    "matchStrings": [
-      "# renovate: datasource=(?<datasource>[a-z-.]+?) depName=(?<depName>[^\\s]+?)(?: (lookupName|packageName)=(?<packageName>[^\\s]+?))?(?: versioning=(?<versioning>[^\\s]+?))?(?: extractVersion=(?<extractVersion>[^\\s]+?))?(?: registryUrl=(?<registryUrl>[^\\s]+?))?\\s(?:ENV|ARG)\\s+[A-Za-z0-9_]+?_VERSION[ =][\"']?(?<currentValue>.+?)[\"']?\\s"
-    ]
-  },
-        {
+    {
+      "customType": "regex",
+      "fileMatch": [
+        "(^|/|\\.)([Dd]ocker|[Cc]ontainer)file$",
+        "(^|/)([Dd]ocker|[Cc]ontainer)file[^/]*$"
+      ],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>[a-z-.]+?) depName=(?<depName>[^\\s]+?)(?: (lookupName|packageName)=(?<packageName>[^\\s]+?))?(?: versioning=(?<versioning>[^\\s]+?))?(?: extractVersion=(?<extractVersion>[^\\s]+?))?(?: registryUrl=(?<registryUrl>[^\\s]+?))?\\s(?:ENV|ARG)\\s+[A-Za-z0-9_]+?_VERSION[ =][\"']?(?<currentValue>.+?)[\"']?\\s"
+      ]
+    },
+    {
       "customType": "regex",
       "fileMatch": ["\\.yml$"],
       "datasourceTemplate": "custom.pkgx",
-      "matchStrings": [
-        "\\s*(?<depName>.*?): \"(?<currentValue>.*?)\""
-      ],
+      "matchStrings": ["\\s*(?<depName>.*?): \"(?<currentValue>.*?)\""],
       "versioningTemplate": "{{#if versioning}}{{{versioning}}}{{else}}semver{{/if}}"
     }
-],
-    "customDatasources": {
+  ],
+  "customDatasources": {
     "pkgx": {
       "defaultRegistryUrlTemplate": "https://dist.pkgx.dev/{{packageName}}/linux/x86-64/versions.txt",
       "format": "plain"
