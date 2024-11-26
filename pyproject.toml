@@ -1,6 +1,6 @@
 [project]
 name = "toogoodtogo-ha-mqtt-bridge"
-version = "0.0.1"
+dynamic = ["version"]
 description = "Small python tool to forward stock of you favourite stores to Home Assistant via MQTT."
 authors = [{ name = "Max Winterstein", email = "github@winterstein.mx" }]
 readme = "README.md"
@@ -38,7 +38,7 @@ dev-dependencies = [
 ]
 
 [build-system]
-requires = ["setuptools >= 61.0"]
+requires = ["setuptools>=64", "setuptools-scm>=8"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
@@ -112,3 +112,5 @@ preview = true
 
 [tool.deptry.per_rule_ignores]
 DEP004 = ["pytest"]
+
+[tool.setuptools_scm]
