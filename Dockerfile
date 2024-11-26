@@ -1,4 +1,4 @@
-FROM python:3.12
+FROM python:3.13
 
 # renovate: datasource=github-releases depName=uv packageName=astral-sh/uv
 ENV UV_VERSION="0.5.3"
