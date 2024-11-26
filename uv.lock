@@ -456,19 +456,19 @@ wheels = [
 
 [[package]]
 name = "tgtg"
-version = "0.18.0"
+version = "0.18.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "requests" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/f2/32/f92adc51d9d85470d735e2c64adb57d01088b898456ad13cf6ef92f9cf19/tgtg-0.18.0.tar.gz", hash = "sha256:98cfa9f04d008df2dbd5395ca9a0f098107b70a0a40d1931fef4e840f9cab5d2", size = 13632 }
+sdist = { url = "https://files.pythonhosted.org/packages/f6/27/d22baf8e8dda293c88f33168969ea0ab3d65d224c17117890e6523116ad9/tgtg-0.18.1.tar.gz", hash = "sha256:8f40bb79cf3fa50b87366bc82c4c15d6e2cbf2f128ea5c8465a3f59646b6a5b9", size = 13635 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/7f/22/4304dae5a36cf34a560175ec80e90b7270523bbe9bc286e5ff7ffc4404b1/tgtg-0.18.0-py3-none-any.whl", hash = "sha256:1510098ceb6308cd918ba33e3646c65cb643a6d304e0f403f791e36c1bd494d9", size = 9868 },
+    { url = "https://files.pythonhosted.org/packages/88/5f/01bd94a9d5c3df8f04d453109bd6c3cb53c02f8c5d9c5f73d5ad7ba8e2df/tgtg-0.18.1-py3-none-any.whl", hash = "sha256:371d8bdad6c8b3ce650d026913db4cbdae32f80401e955ce72ded127967a4086", size = 9867 },
 ]
 
 [[package]]
 name = "toogoodtogo-ha-mqtt-bridge"
-version = "0.0.1"
+version = "2.5.2.dev18+g2b06367.d20241126"
 source = { editable = "." }
 dependencies = [
     { name = "arrow" },
@@ -511,7 +511,7 @@ requires-dist = [
     { name = "schedule" },
     { name = "setuptools" },
     { name = "tenacity" },
-    { name = "tgtg", specifier = "==0.18.0" },
+    { name = "tgtg", specifier = "==0.18.1" },
 ]
 
 [package.metadata.requires-dev]

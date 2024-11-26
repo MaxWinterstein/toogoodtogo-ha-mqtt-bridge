@@ -9,7 +9,7 @@ requires-python = "==3.12.*"
 dependencies = [
     "paho-mqtt==1.6.1",
     "dynaconf",
-    "tgtg==0.18.0",
+    "tgtg==0.18.1",
     "coloredlogs",
     "tenacity",
     "arrow",
