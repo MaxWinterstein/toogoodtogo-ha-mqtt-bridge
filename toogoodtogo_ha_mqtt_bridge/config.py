@@ -1,9 +1,12 @@
-from dynaconf import Dynaconf
+from dynaconf import Dynaconf, Validator
+
+msg = "Settings object '{name}' not found. Did you create a settings.local.json?"
 
 settings = Dynaconf(
     envvar_prefix="DYNACONF",
     settings_files=["settings.json", "settings.local.json", ".secrets.toml"],
 )
 
-# `envvar_prefix` = export envvars with `export DYNACONF_FOO=bar`.
-# `settings_files` = Load this files in the order.
+settings.validators.register(
+    Validator("tgtg", must_exist=True, messages={"must_exist_true": msg}),
+)
