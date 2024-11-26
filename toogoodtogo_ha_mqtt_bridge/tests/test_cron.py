@@ -30,6 +30,6 @@ def test_calc_next_run(_time, _cron, expected):
     # we would expect to sleep less than expected_sleep plus maybe a little randomize
     present = arrow.utcnow()
     future = present.shift(seconds=sleep_seconds)
-    print(f'Would sleep {present.humanize(future, granularity=["hour", "minute"])}')
+    print(f"Would sleep {present.humanize(future, granularity=['hour', 'minute'])}")
     if not expected_date <= time_date + dt.timedelta(seconds=sleep_seconds) <= expected_date + dt.timedelta(seconds=20):
         raise RuntimeError("Next runtime seems off")  # noqa: TRY003
