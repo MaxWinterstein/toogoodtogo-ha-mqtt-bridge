@@ -17,8 +17,9 @@ RUN uv sync --frozen --no-install-project --no-dev
 # Copy the project into the image
 ADD . /app
 
-# Sync the project
-RUN uv sync --frozen --no-dev
+# Sync the project (with mounted .git for setuptools_scm to work)
+RUN --mount=source=.git,target=.git,type=bind \
+  uv sync --frozen --no-dev
 
 # Place executables in the environment at the front of the path
 ENV PATH="/app/.venv/bin:$PATH"
