@@ -1,13 +1,9 @@
-name: build-and-push
+name: build-and-push-master
 
 on:
-  # Allows you to run this workflow manually from the Actions tab
-  workflow_dispatch:
-    inputs:
-      version:
-        description: "Image Tag"
-        required: true
-
+  push:
+    branches:
+      - main
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
@@ -31,5 +27,4 @@ jobs:
           platforms: linux/amd64,linux/arm/v7,linux/arm64
           push: true
           tags: |
-            maxwinterstein/toogoodtogo-ha-mqtt-bridge:${{ github.event.inputs.version }}
-            maxwinterstein/toogoodtogo-ha-mqtt-bridge:latest
+            maxwinterstein/toogoodtogo-ha-mqtt-bridge:master
