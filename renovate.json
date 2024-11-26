@@ -29,9 +29,7 @@
   "packageRules": [
     {
       "groupName": "uv",
-      "matchUpdateTypes": ["major", "minor", "patch"],
-      "groupSlug": "astral-sh-uv",
-      "matchPackageNames": ["astral.sh/uv", "uv"]
+      "matchPackageNames": ["**uv"]
     }
   ]
 }
