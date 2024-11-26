@@ -27,5 +27,15 @@
       "defaultRegistryUrlTemplate": "https://dist.pkgx.dev/{{packageName}}/linux/x86-64/versions.txt",
       "format": "plain"
     }
-  }
+  },
+  "packageRules": 
+  [
+        {
+      groupName: "uv",
+      commitMessagePrefix: "REQs: ",
+      matchUpdateTypes: ["major", "minor", "patch"],
+      groupSlug: "astral-sh-uv",
+      matchPackageNames: ["/^astral\\.sh/uv$/", "/^ghcr\\.io/astral-sh/uv$/"],
+    }
+  ]
 }
