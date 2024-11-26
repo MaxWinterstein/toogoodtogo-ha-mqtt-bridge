@@ -7,7 +7,7 @@ readme = "README.md"
 keywords = ['python']
 requires-python = "==3.12.*"
 dependencies = [
-    "paho-mqtt==1.6.1",
+    "paho-mqtt==2.1.0",
     "dynaconf",
     "tgtg==0.18.0",
     "coloredlogs",
