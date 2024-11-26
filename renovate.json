@@ -12,5 +12,11 @@
       "# renovate: datasource=(?<datasource>[a-z-.]+?) depName=(?<depName>[^\\s]+?)(?: (lookupName|packageName)=(?<packageName>[^\\s]+?))?(?: versioning=(?<versioning>[^\\s]+?))?(?: extractVersion=(?<extractVersion>[^\\s]+?))?(?: registryUrl=(?<registryUrl>[^\\s]+?))?\\s(?:ENV|ARG)\\s+[A-Za-z0-9_]+?_VERSION[ =][\"']?(?<currentValue>.+?)[\"']?\\s"
     ]
   }
-]
+],
+    "customDatasources": {
+    "pkgx": {
+      "defaultRegistryUrlTemplate": "https://dist.pkgx.dev/{{packageName}}/linux/x86-64/versions.txt",
+      "format": "plain"
+    }
+  }
 }
