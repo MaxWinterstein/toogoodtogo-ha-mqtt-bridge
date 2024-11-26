@@ -1,11 +1,11 @@
-name: Build docker images - and push as test
+name: Build docker images - and push as release
 
 on:
-  # Allows you to run this workflow manually from the Actions tab
-  workflow_dispatch:
+  release:
+    types: [published]
 
 jobs:
-  build:
+  build-and-release:
     runs-on: ubuntu-latest
 
     steps:
@@ -22,6 +22,9 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Extract version from release tag
+        id: extract_version
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_ENV
       - name: Build
         uses: docker/build-push-action@v6
         with:
@@ -29,4 +32,5 @@ jobs:
           platforms: linux/amd64,linux/arm/v7,linux/arm64
           push: true
           tags: |
-            maxwinterstein/toogoodtogo-ha-mqtt-bridge:test
+            maxwinterstein/toogoodtogo-ha-mqtt-bridge:${{ env.VERSION }}
+            maxwinterstein/toogoodtogo-ha-mqtt-bridge:latest
