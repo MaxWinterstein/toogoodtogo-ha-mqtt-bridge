@@ -25,6 +25,6 @@ jobs:
         with:
           context: .
           platforms: ${{ matrix.platform }}
-          push: false
+          push: true
           tags: |
             maxwinterstein/toogoodtogo-ha-mqtt-bridge:test
