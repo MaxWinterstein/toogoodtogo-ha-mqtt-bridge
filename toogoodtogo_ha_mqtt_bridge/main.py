@@ -446,9 +446,14 @@ def watchdog_handler():
     exit_from_thread("Watchdog handler fired! No pull in the last " + str(watchdog_timeout / 60) + " minutes!", 1)
 
 
-def on_disconnect(client, userdata, rc):
-    if rc != 0:
+def on_connect(client, userdata, flags, reason_code, properties):
+    logger.debug(f"MQTT seems connected. (reason_code: {reason_code})")
+
+
+def on_disconnect(client, userdata, flags, reason_code, properties):
+    if reason_code != 0:
         logger.error("Wow, mqtt client lost connection. Will try to reconnect once in 30s.")
+        logger.debug(f"reason_code: {reason_code}")
         sleep(30)
         logger.debug("Trying to reconnect")
         client.reconnect()
@@ -583,11 +588,12 @@ def start():
     )
 
     logger.info("Connecting mqtt")
-    mqtt_client = mqtt.Client("toogoodtogo-ha-mqtt-bridge")
+    mqtt_client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id="toogoodtogo-ha-mqtt-bridge")
     if settings.mqtt.username:
         mqtt_client.username_pw_set(username=settings.mqtt.username, password=settings.mqtt.password)
     mqtt_client.connect(host=settings.mqtt.host, port=int(settings.mqtt.port))
     mqtt_client.on_disconnect = on_disconnect
+    mqtt_client.on_connect = on_connect
 
     if "intense_fetch" in settings.tgtg:
         mqtt_client.subscribe("homeassistant/switch/toogoodtogo_intense_fetch/set")
