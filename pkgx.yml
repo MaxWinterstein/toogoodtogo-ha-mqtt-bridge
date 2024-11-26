@@ -1,1 +1,4 @@
-dependencies: uv prettier pre-commit
+dependencies:
+  prettier.io: "3.4.0"
+  pre-commit.com: "4.0.1"
+  astral.sh/uv: "0.5.3"
