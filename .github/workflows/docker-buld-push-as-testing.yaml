@@ -7,9 +7,6 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        platform: [linux/amd64, linux/arm/v7, linux/arm64]
 
     steps:
       - name: Checkout
@@ -29,7 +26,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          platforms: ${{ matrix.platform }}
+          platforms: linux/amd64,linux/arm/v7,linux/arm64
           push: true
           tags: |
             maxwinterstein/toogoodtogo-ha-mqtt-bridge:test
