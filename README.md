@@ -20,9 +20,26 @@ Docker image is created automatically and available at dockerhub: [maxwinterstei
 
 ### Native
 
-- Create some virtualenv (or what you personally prefer) with at least python 3.9
-- Install requirements `pip install -r requirements.txt`
-- Install TooGoodToGoo Home Assistant Mqtt Bridge `pip install .`
+This project uses some awesome tools for better developer expirence:
+
+- [`direnv`](https://direnv.net/)
+- [`pkgx`](https://pkgx.dev/)
+- [`Taskfile`](https://taskfile.dev/)
+
+None of this is required to run it natively, but makes the job a lot easier.
+
+There are multiples ways to get going, some of the fastest might be using `pkgx` and `direnv`.
+Having both pre-installed on your machine (see related docs) will get you going this quick:
+
+- Adjust `settings.local.json` - see below
+- Start a _pkgx_ dev environment
+  ```bash
+  dev # provided by pkgx - will read pkgx.yaml and install deps
+  ```
+- Run it though Taskfile (the better Makefile INHO)
+  ```bash
+  task run
+  ```
 
 ### Configuration
 
