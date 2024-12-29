@@ -7,20 +7,18 @@ readme = "README.md"
 keywords = ['python']
 requires-python = "==3.12.*"
 dependencies = [
-    "paho-mqtt==2.1.0",
-    "dynaconf",
-    "tgtg==0.18.1",
-    "coloredlogs",
-    "tenacity",
-    "arrow",
-    "croniter",
-    "google-play-scraper",
-    "random_user_agent",
-    "packaging",
-    "freezegun",
-    "schedule",
-    "setuptools",
-    "click==8.1.8",
+  "paho-mqtt==2.1.0",
+  "dynaconf",
+  "tgtg==0.18.1",
+  "coloredlogs",
+  "arrow",
+  "croniter",
+  "google-play-scraper",
+  "random_user_agent",
+  "packaging",
+  "freezegun",
+  "schedule",
+  "click==8.1.8",
 ]
 
 [project.urls]
@@ -30,11 +28,12 @@ Documentation = "https://MaxWinterstein.github.io/toogoodtogo-ha-mqtt-bridge/"
 
 [tool.uv]
 dev-dependencies = [
-    "pytest>=7.2.0",
-    "pre-commit>=2.20.0",
-    "deptry>=0.20.0",
-    "mypy>=0.991",
-    "ruff>=0.6.9",
+  "pytest>=7.2.0",
+  "pre-commit>=2.20.0",
+  "deptry>=0.20.0",
+  "mypy>=0.991",
+  "types-croniter",
+  "ruff>=0.6.9",
 ]
 
 [build-system]
@@ -53,6 +52,7 @@ check_untyped_defs = true
 warn_return_any = true
 warn_unused_ignores = true
 show_error_codes = true
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -64,44 +64,45 @@ fix = true
 
 [tool.ruff.lint]
 select = [
-    # flake8-2020
-    "YTT",
-    # flake8-bandit
-    "S",
-    # flake8-bugbear
-    "B",
-    # flake8-builtins
-    "A",
-    # flake8-comprehensions
-    "C4",
-    # flake8-debugger
-    "T10",
-    # flake8-simplify
-    "SIM",
-    # isort
-    "I",
-    # mccabe
-    "C90",
-    # pycodestyle
-    "E", "W",
-    # pyflakes
-    "F",
-    # pygrep-hooks
-    "PGH",
-    # pyupgrade
-    "UP",
-    # ruff
-    "RUF",
-    # tryceratops
-    "TRY",
+  # flake8-2020
+  "YTT",
+  # flake8-bandit
+  "S",
+  # flake8-bugbear
+  "B",
+  # flake8-builtins
+  "A",
+  # flake8-comprehensions
+  "C4",
+  # flake8-debugger
+  "T10",
+  # flake8-simplify
+  "SIM",
+  # isort
+  "I",
+  # mccabe
+  "C90",
+  # pycodestyle
+  "E",
+  "W",
+  # pyflakes
+  "F",
+  # pygrep-hooks
+  "PGH",
+  # pyupgrade
+  "UP",
+  # ruff
+  "RUF",
+  # tryceratops
+  "TRY",
 ]
 ignore = [
-    # LineTooLong
-    "E501",
-    # DoNotAssignLambda
-    "E731",
-    # i like my unnecessary True if ... else False
-    "SIM210",
+  # LineTooLong
+  "E501",
+  # DoNotAssignLambda
+  "E731",
+  # i like my unnecessary True if ... else False
+  "SIM210",
 ]
 
 [tool.ruff.lint.per-file-ignores]
