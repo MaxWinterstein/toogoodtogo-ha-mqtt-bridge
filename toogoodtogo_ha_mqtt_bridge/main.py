@@ -9,6 +9,7 @@ import time
 from datetime import datetime, timedelta
 from pathlib import Path
 from time import sleep
+from typing import Any
 
 import arrow
 import click
@@ -30,20 +31,20 @@ coloredlogs.install(
     level="DEBUG", logger=logger, fmt="%(asctime)s [%(levelname)s] %(message)s"
 )  # pretty logging is pretty
 
-mqtt_client: mqtt.Client | None = None
+mqtt_client: mqtt.Client = None  # type: ignore[assignment]
 first_run = True
-tgtg_client: TgtgClient | None = None
+tgtg_client: TgtgClient = None  # type: ignore[no-any-unimported]
 tgtg_version: str | None = None
 intense_fetch_thread = None
-tokens = {}
+tokens: dict[Any, Any] = {}
 tokens_rev = 2  # in case of tokens.json changes, bump this
-watchdog: Watchdog | None = None
+watchdog: Watchdog = None  # type: ignore[assignment]
 watchdog_timeout = 0
-favourite_ids = []
-scheduled_jobs = []
+favourite_ids: list[int] = []
+scheduled_jobs: list[Any] = []
 
 
-def check():
+def check() -> bool:
     global first_run
     global favourite_ids
     favourite_ids.clear()
@@ -98,13 +99,13 @@ def check():
 
         pickup_start_date = None if not stock else arrow.get(shop["pickup_interval"]["start"]).to(tz=settings.timezone)
         pickup_end_date = None if not stock else arrow.get(shop["pickup_interval"]["end"]).to(tz=settings.timezone)
-        pickup_start_str = ("Unknown" if stock == 0 else pickup_start_date.to(tz=settings.timezone).format(),)
-        pickup_end_str = ("Unknown" if stock == 0 else pickup_end_date.to(tz=settings.timezone).format(),)
+        pickup_start_str = ("Unknown" if stock == 0 else pickup_start_date.to(tz=settings.timezone).format(),)  # type: ignore[union-attr]
+        pickup_end_str = ("Unknown" if stock == 0 else pickup_end_date.to(tz=settings.timezone).format(),)  # type: ignore[union-attr]
         pickup_start_human = (
-            "Unknown" if stock == 0 else pickup_start_date.humanize(only_distance=False, locale=settings.locale)
+            "Unknown" if stock == 0 else pickup_start_date.humanize(only_distance=False, locale=settings.locale)  # type: ignore[union-attr]
         )
         pickup_end_human = (
-            "Unknown" if stock == 0 else pickup_end_date.humanize(only_distance=False, locale=settings.locale)
+            "Unknown" if stock == 0 else pickup_end_date.humanize(only_distance=False, locale=settings.locale)  # type: ignore[union-attr]
         )
 
         # get company logo
@@ -152,7 +153,7 @@ def check():
     return True
 
 
-def build_ua():
+def build_ua() -> Any:
     global tgtg_version
     software_names = [SoftwareName.ANDROID.value]
     user_agent_rotator = UserAgent(software_names=software_names, limit=20)
@@ -165,7 +166,7 @@ def build_ua():
     return user_agent
 
 
-def is_latest_version():
+def is_latest_version() -> bool:
     logger.info("Checking latest tgtg appstore version")
     try:
         app_info = app("com.app.tgtg", lang="de", country="de")
@@ -188,11 +189,11 @@ def is_latest_version():
         return True
 
 
-def is_latest_token_rev():
+def is_latest_token_rev() -> Any:
     return tokens["rev"] >= tokens_rev
 
 
-def write_token_file():
+def write_token_file() -> None:
     global tokens
     tgtg_tokens = {
         "access_token": tgtg_client.access_token,
@@ -212,7 +213,7 @@ def write_token_file():
     logger.info("Written tokens.json file to filesystem")
 
 
-def check_existing_token_file():
+def check_existing_token_file() -> bool:
     if os.path.isfile(settings.get("data_dir") + "/tokens.json"):
         return read_token_file()
     else:
@@ -220,12 +221,12 @@ def check_existing_token_file():
         return False
 
 
-def nuke_token_file():
+def nuke_token_file() -> None:
     logger.info("Old tokenfile found. Please login via email again.")
     os.remove(settings.get("data_dir") + "/tokens.json")
 
 
-def read_token_file():
+def read_token_file() -> bool:
     global tokens
     with open(settings.get("data_dir") + "/tokens.json") as f:
         tokens = json.load(f)
@@ -249,11 +250,11 @@ def read_token_file():
         return False
 
 
-def update_ua():
+def update_ua() -> None:
     global tokens
     ua = tokens["ua"]
     updated_ua = ua.split(" ")[1:]
-    updated_ua = "TGTG/" + tgtg_version + " " + " ".join(updated_ua)
+    updated_ua = "TGTG/" + tgtg_version + " " + " ".join(updated_ua)  # type: ignore[operator]
     tokens["ua"] = updated_ua
     tokens["token_version"] = tgtg_version
 
@@ -261,7 +262,7 @@ def update_ua():
     write_token_file()
 
 
-def rebuild_tgtg_client():
+def rebuild_tgtg_client() -> None:
     global tgtg_client
     tgtg_client = TgtgClient(
         cookie=tokens["cookie"],
@@ -273,7 +274,7 @@ def rebuild_tgtg_client():
     )
 
 
-def check_for_removed_stores(shops: []):
+def check_for_removed_stores(shops: list[Any]) -> None:
     path = settings.get("data_dir") + "/known_shops.json"
 
     checked_items = [shop["item"]["item_id"] for shop in shops]
@@ -299,7 +300,7 @@ def check_for_removed_stores(shops: []):
     pass
 
 
-def fetch_loop(event):
+def fetch_loop(event: Any) -> None:
     logger.info("Starting loop")
 
     create_data_dir()
@@ -325,7 +326,7 @@ def fetch_loop(event):
         event.wait(calc_next_run())
 
 
-def next_sales_loop():
+def next_sales_loop() -> None:
     while True:
         if favourite_ids:
             for fav_id in favourite_ids:
@@ -361,7 +362,7 @@ def next_sales_loop():
         sleep(sleep_seconds)
 
 
-def trigger_intense_fetch():
+def trigger_intense_fetch() -> Any:
     logger.info("Running automatic intense fetch!")
     mqtt_client.publish(
         "homeassistant/switch/toogoodtogo_intense_fetch/set",
@@ -370,7 +371,7 @@ def trigger_intense_fetch():
     return schedule.CancelJob
 
 
-def ua_check_loop():
+def ua_check_loop() -> None:
     while True:
         now = datetime.now()
         cron = croniter("0 0,12 * * *", now)
@@ -382,7 +383,7 @@ def ua_check_loop():
             update_ua()
 
 
-def calc_next_run():
+def calc_next_run() -> Any:
     cron_schedule = get_cron_schedule()
     now = datetime.now()
 
@@ -405,9 +406,10 @@ def calc_next_run():
         return sleep_seconds + 1
     else:
         exit_from_thread("Invalid cron schedule", 1)
+        return  # might never be returned
 
 
-def get_fallback_cron(tgtg):
+def get_fallback_cron(tgtg: Any) -> str:
     # Create fallback cron with old every_n_minutes setting
     if "every_n_minutes" not in tgtg:
         exit_from_thread("No interval found in settings, please check your config.", 1)
@@ -423,7 +425,7 @@ def get_fallback_cron(tgtg):
     return "*/" + str(tgtg.every_n_minutes) + " * * * *"
 
 
-def get_cron_schedule():
+def get_cron_schedule() -> Any:
     tgtg = settings.get("tgtg")
     if "polling_schedule" not in tgtg:
         return get_fallback_cron(tgtg)
@@ -431,26 +433,26 @@ def get_cron_schedule():
         return tgtg.polling_schedule
 
 
-def create_data_dir():
+def create_data_dir() -> None:
     data_dir = settings.get("data_dir")
     if not os.path.isdir(data_dir):
         Path(data_dir).mkdir(parents=True)
 
 
-def exit_from_thread(message, return_code):
+def exit_from_thread(message: str, return_code: int) -> None:
     logger.exception(message)
     os._exit(return_code)
 
 
-def watchdog_handler():
+def watchdog_handler() -> None:
     exit_from_thread("Watchdog handler fired! No pull in the last " + str(watchdog_timeout / 60) + " minutes!", 1)
 
 
-def on_connect(client, userdata, flags, reason_code, properties):
+def on_connect(client, userdata, flags, reason_code, properties) -> None:  # type: ignore[no-untyped-def]
     logger.debug(f"MQTT seems connected. (reason_code: {reason_code})")
 
 
-def on_disconnect(client, userdata, flags, reason_code, properties):
+def on_disconnect(client, userdata, flags, reason_code, properties) -> None:  # type: ignore[no-untyped-def]
     if reason_code != 0:
         logger.error("Wow, mqtt client lost connection. Will try to reconnect once in 30s.")
         logger.debug(f"reason_code: {reason_code}")
@@ -459,7 +461,7 @@ def on_disconnect(client, userdata, flags, reason_code, properties):
         client.reconnect()
 
 
-def calc_timeout():
+def calc_timeout() -> Any:
     global watchdog_timeout
     now = datetime.now()
     cron_schedule = get_cron_schedule()
@@ -475,24 +477,25 @@ def calc_timeout():
         return watchdog_timeout
     else:
         exit_from_thread("Invalid cron schedule", 1)
+        return  # might never be returned
 
 
-def intense_fetch():
+def intense_fetch() -> None:
     if (
         "intense_fetch" not in settings.tgtg
         or "period_of_time" not in settings.tgtg.intense_fetch
         or "interval" not in settings.tgtg.intense_fetch
     ):
         logger.error("Incomplete settings file. Please check the sample!")
-        return None
+        return
 
     if settings.tgtg.intense_fetch.period_of_time > 60:
         logger.warning("Stopped intense fetch. Maximal intense fetch period time are 60 minutes. Reduce your setting!")
-        return None
+        return
 
     if settings.tgtg.intense_fetch.interval < 10:
         logger.warning("Stopped intense fetch. Minimal intense fetch interval are 10 seconds. Increase your setting!")
-        return None
+        return
 
     mqtt_client.publish(
         "homeassistant/switch/toogoodtogo_intense_fetch/state",
@@ -521,20 +524,20 @@ def intense_fetch():
     logger.info("Intense fetch stopped")
 
 
-def on_message(client, userdata, message):
+def on_message(client: Any, userdata: Any, message: Any) -> None:
     global intense_fetch_thread
     if message.topic.endswith("toogoodtogo_intense_fetch/set"):
         if message.payload.decode("utf-8") == "ON":
             if intense_fetch_thread:
                 logger.error("Intense fetch thread already running. Doing nothing.")
-                return None
+                return
 
             thread = threading.Thread(target=intense_fetch)
             intense_fetch_thread = thread
             thread.start()
         elif message.payload.decode("utf-8") == "OFF":
             if intense_fetch_thread:
-                intense_fetch_thread.do_run = False
+                intense_fetch_thread.do_run = False  # type: ignore[attr-defined]
                 logger.info("Intense fetch is stopped in the next cycle.")
                 mqtt_client.publish(
                     "homeassistant/switch/toogoodtogo_intense_fetch/state",
@@ -544,7 +547,7 @@ def on_message(client, userdata, message):
                 logger.info("No running thread found. Doing nothing.")
 
 
-def register_fetch_sensor():
+def register_fetch_sensor() -> None:
     mqtt_client.publish(
         "homeassistant/switch/toogoodtogo_bridge/intense_fetch/config",
         json.dumps({
@@ -568,7 +571,7 @@ def register_fetch_sensor():
     )
 
 
-def run_pending_schedules():
+def run_pending_schedules() -> None:
     while True:
         schedule.run_pending()
         time.sleep(1)
@@ -576,7 +579,7 @@ def run_pending_schedules():
 
 @click.command()
 @click.version_option(package_name="toogoodtogo_ha_mqtt_bridge")
-def start():
+def start() -> None:
     global tgtg_client, watchdog, mqtt_client
     tgtg_client = TgtgClient(
         email=settings.tgtg.email, language=settings.tgtg.language, timeout=30, user_agent=build_ua()

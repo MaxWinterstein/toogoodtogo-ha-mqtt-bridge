@@ -1,0 +1,26 @@
+name: Check MR
+
+on: [pull_request]
+
+jobs:
+  mypy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: pkgxdev/setup@v1
+        with:
+          +: task
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+      - name: "Set up Python"
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: "pyproject.toml"
+
+      - name: Install the project
+        run: uv sync --all-extras --dev
+
+      - name: Run mypy
+        # For example, using `pytest`
+        run: uv run mypy

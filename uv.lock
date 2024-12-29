@@ -431,30 +431,12 @@ wheels = [
 ]
 
 [[package]]
-name = "setuptools"
-version = "75.6.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/43/54/292f26c208734e9a7f067aea4a7e282c080750c4546559b58e2e45413ca0/setuptools-75.6.0.tar.gz", hash = "sha256:8199222558df7c86216af4f84c30e9b34a61d8ba19366cc914424cdbd28252f6", size = 1337429 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/55/21/47d163f615df1d30c094f6c8bbb353619274edccf0327b185cc2493c2c33/setuptools-75.6.0-py3-none-any.whl", hash = "sha256:ce74b49e8f7110f9bf04883b730f4765b774ef3ef28f722cce7c273d253aaf7d", size = 1224032 },
-]
-
-[[package]]
 name = "six"
 version = "1.16.0"
 source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/71/39/171f1c67cd00715f190ba0b100d606d440a28c93c7714febeca8b79af85e/six-1.16.0.tar.gz", hash = "sha256:1e61c37477a1626458e36f7b1d82aa5c9b094fa4802892072e49de9c60c4c926", size = 34041 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/d9/5a/e7c31adbe875f2abbb91bd84cf2dc52d792b5a01506781dbcf25c91daf11/six-1.16.0-py2.py3-none-any.whl", hash = "sha256:8abb2f1d86890a2dfb989f9a77cfcfd3e47c2a354b01111771326f8aa26e0254", size = 11053 },
-]
-
-[[package]]
-name = "tenacity"
-version = "9.0.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/cd/94/91fccdb4b8110642462e653d5dcb27e7b674742ad68efd146367da7bdb10/tenacity-9.0.0.tar.gz", hash = "sha256:807f37ca97d62aa361264d497b0e31e92b8027044942bfa756160d908320d73b", size = 47421 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/b6/cb/b86984bed139586d01532a587464b5805f12e397594f19f931c4c2fbfa61/tenacity-9.0.0-py3-none-any.whl", hash = "sha256:93de0c98785b27fcf659856aa9f54bfbd399e29969b0621bc7f762bd441b4539", size = 28169 },
 ]
 
 [[package]]
@@ -471,7 +453,7 @@ wheels = [
 
 [[package]]
 name = "toogoodtogo-ha-mqtt-bridge"
-version = "3.0.1.dev2+g71de785.d20241221"
+version = "3.0.1.dev11+g70503d7.d20241229"
 source = { editable = "." }
 dependencies = [
     { name = "arrow" },
@@ -485,8 +467,6 @@ dependencies = [
     { name = "paho-mqtt" },
     { name = "random-user-agent" },
     { name = "schedule" },
-    { name = "setuptools" },
-    { name = "tenacity" },
     { name = "tgtg" },
 ]
 
@@ -497,6 +477,7 @@ dev = [
     { name = "pre-commit" },
     { name = "pytest" },
     { name = "ruff" },
+    { name = "types-croniter" },
 ]
 
 [package.metadata]
@@ -512,8 +493,6 @@ requires-dist = [
     { name = "paho-mqtt", specifier = "==2.1.0" },
     { name = "random-user-agent" },
     { name = "schedule" },
-    { name = "setuptools" },
-    { name = "tenacity" },
     { name = "tgtg", specifier = "==0.18.1" },
 ]
 
@@ -524,6 +503,16 @@ dev = [
     { name = "pre-commit", specifier = ">=2.20.0" },
     { name = "pytest", specifier = ">=7.2.0" },
     { name = "ruff", specifier = ">=0.6.9" },
+    { name = "types-croniter" },
+]
+
+[[package]]
+name = "types-croniter"
+version = "5.0.1.20241205"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/77/2f/f3298f148a7983df2a878d53c4a17ef1dd8654a155e11caa8decb7d79670/types_croniter-5.0.1.20241205.tar.gz", hash = "sha256:8a7cb10aa0b487c654a10c14d4e99098c92a5d68ee55c7a92a3df095831a6933", size = 10928 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/dc/ec/ff0222b912fdff040a1908ea226f64ff5a1a384a4062a8714eb8b80ea5d9/types_croniter-5.0.1.20241205-py3-none-any.whl", hash = "sha256:e36e992d6a4600ddf510991a20d3273b888ecea5d77a19078348e00775ba54d3", size = 9375 },
 ]
 
 [[package]]

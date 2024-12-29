@@ -16,7 +16,7 @@ from toogoodtogo_ha_mqtt_bridge.main import calc_next_run
         ("2022-11-12 20:54:44", "*/10 7-20 * * *", "2022-11-13 07:00:00"),
     ],
 )
-def test_calc_next_run(_time, _cron, expected):
+def test_calc_next_run(_time: str, _cron: str, expected: str) -> None:
     expected_date = dt.datetime.strptime(expected, "%Y-%m-%d %H:%M:%S")
     time_date = dt.datetime.strptime(_time, "%Y-%m-%d %H:%M:%S")
 
