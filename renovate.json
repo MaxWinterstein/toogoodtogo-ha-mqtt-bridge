@@ -29,7 +29,7 @@
   "packageRules": [
     {
       "groupName": "uv",
-      "matchPackageNames": ["**uv"]
+      "matchPackageNames": ["uv", "astral.sh/uv"]
     }
   ]
 }
