@@ -8,7 +8,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-      - uses: pkgxdev/setup@v1
+      - uses: pkgxdev/setup@v2
         with:
           +: task
       - name: Install uv
