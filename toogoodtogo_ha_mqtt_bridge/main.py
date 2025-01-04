@@ -330,6 +330,9 @@ def next_sales_loop() -> None:
     while True:
         if favourite_ids:
             for fav_id in favourite_ids:
+                if settings.fetch_delay:
+                    # 15s seems to work better but still causes 403
+                    time.sleep(settings.fetch_delay);
                 item = tgtg_client.get_item(item_id=fav_id)
                 if "next_sales_window_purchase_start" in item:
                     next_sales_window = arrow.get(item["next_sales_window_purchase_start"]).to(tz=settings.timezone)
