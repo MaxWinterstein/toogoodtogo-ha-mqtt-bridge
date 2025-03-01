@@ -1,4 +1,4 @@
 dependencies:
   prettier.io: "3.4.2"
-  pre-commit.com: "4.0.1"
+  pre-commit.com: "4.1.0"
   astral.sh/uv: "0.5.13"
