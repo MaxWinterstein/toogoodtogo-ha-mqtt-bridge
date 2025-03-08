@@ -454,6 +454,7 @@ wheels = [
 
 [[package]]
 name = "toogoodtogo-ha-mqtt-bridge"
+version = "3.0.1.dev11+g70503d7.d20241229"
 source = { editable = "." }
 dependencies = [
     { name = "arrow" },
