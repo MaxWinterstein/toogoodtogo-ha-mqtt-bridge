@@ -1,4 +1,5 @@
 version = 1
+revision = 1
 requires-python = "==3.12.*"
 
 [[package]]
@@ -441,14 +442,14 @@ wheels = [
 
 [[package]]
 name = "tgtg"
-version = "0.18.1"
+version = "0.18.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "requests" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/f6/27/d22baf8e8dda293c88f33168969ea0ab3d65d224c17117890e6523116ad9/tgtg-0.18.1.tar.gz", hash = "sha256:8f40bb79cf3fa50b87366bc82c4c15d6e2cbf2f128ea5c8465a3f59646b6a5b9", size = 13635 }
+sdist = { url = "https://files.pythonhosted.org/packages/4c/61/c7c66e7502fadabb2adc81037e817797abb4f91efae0b37c9d7acc61bd77/tgtg-0.18.2.tar.gz", hash = "sha256:306643d0b6d98d645484c736467abf851f47600029f1943e97f15ce7f0fbd2df", size = 13643 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/88/5f/01bd94a9d5c3df8f04d453109bd6c3cb53c02f8c5d9c5f73d5ad7ba8e2df/tgtg-0.18.1-py3-none-any.whl", hash = "sha256:371d8bdad6c8b3ce650d026913db4cbdae32f80401e955ce72ded127967a4086", size = 9867 },
+    { url = "https://files.pythonhosted.org/packages/54/47/2b09f4b33af504060f90c5de0b76c02e46b6e9c53aea38ee58fbbceaed8d/tgtg-0.18.2-py3-none-any.whl", hash = "sha256:c64a9c6fbdcfb8a5dc63d90aa305efc4268257e7ebae261074666a9986238a0d", size = 9862 },
 ]
 
 [[package]]
@@ -493,7 +494,7 @@ requires-dist = [
     { name = "paho-mqtt", specifier = "==2.1.0" },
     { name = "random-user-agent" },
     { name = "schedule" },
-    { name = "tgtg", specifier = "==0.18.1" },
+    { name = "tgtg", specifier = "==0.18.2" },
 ]
 
 [package.metadata.requires-dev]
