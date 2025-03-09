@@ -43,17 +43,53 @@ watchdog_timeout = 0
 favourite_ids: list[int] = []
 scheduled_jobs: list[Any] = []
 
+DEVICE_INFO = {
+    "identifiers": ["toogoodtogo_bridge"],
+    "manufacturer": "Max Winterstein",
+    "model": "TooGoodToGo favorites",
+    "name": "Too Good To Go",
+}
+
 
 def check() -> bool:
     global first_run
-    global favourite_ids
-    favourite_ids.clear()
 
     if not first_run:
         tgtg_client.login()
         write_token_file()
 
-    shops = tgtg_client.get_items(page_size=400)
+    try:
+        shops = tgtg_client.get_items(page_size=400)
+        if not publish_stores_data(shops):
+            return False
+    except Exception as e:
+        logger.error(f"Error fetching stores: {e}")
+        return False
+
+    if settings.get("cleanup"):
+        check_for_removed_stores(shops)
+
+    try:
+        active_orders = tgtg_client.get_active()
+        if not publish_orders_data(active_orders):
+            return False
+    except Exception as e:
+        logger.error(f"Error fetching active orders: {e}")
+        return False
+
+    # Start automatic intense fetch watchdog
+    if first_run and settings.get("enable_auto_intense_fetch"):
+        thread = threading.Thread(target=next_sales_loop)
+        thread.start()
+
+    first_run = False
+
+    return True
+
+def publish_stores_data(shops):
+    global favourite_ids
+    favourite_ids.clear()
+
     for shop in shops:
         stock = shop["items_available"]
         item_id = shop["item"]["item_id"]
@@ -71,12 +107,7 @@ def check() -> bool:
                 "json_attributes_topic": f"homeassistant/sensor/toogoodtogo_{item_id}/attr",
                 "unit_of_measurement": "portions",
                 "value_template": "{{ value_json.stock }}",
-                "device": {
-                    "identifiers": ["toogoodtogo_bridge"],
-                    "manufacturer": "Max Winterstein",
-                    "model": "TooGoodToGo favorites",
-                    "name": "Too Good To Go",
-                },
+                "device": DEVICE_INFO,
                 "unique_id": f"toogoodtogo_{item_id}",
             }),
         )
@@ -99,8 +130,8 @@ def check() -> bool:
 
         pickup_start_date = None if not stock else arrow.get(shop["pickup_interval"]["start"]).to(tz=settings.timezone)
         pickup_end_date = None if not stock else arrow.get(shop["pickup_interval"]["end"]).to(tz=settings.timezone)
-        pickup_start_str = ("Unknown" if stock == 0 else pickup_start_date.to(tz=settings.timezone).format(),)  # type: ignore[union-attr]
-        pickup_end_str = ("Unknown" if stock == 0 else pickup_end_date.to(tz=settings.timezone).format(),)  # type: ignore[union-attr]
+        pickup_start_str = ("Unknown" if stock == 0 else pickup_start_date.to(tz=settings.timezone).isoformat(),)  # type: ignore[union-attr]
+        pickup_end_str = ("Unknown" if stock == 0 else pickup_end_date.to(tz=settings.timezone).isoformat(),)  # type: ignore[union-attr]
         pickup_start_human = (
             "Unknown" if stock == 0 else pickup_start_date.humanize(only_distance=False, locale=settings.locale)  # type: ignore[union-attr]
         )
@@ -140,15 +171,147 @@ def check() -> bool:
             logger.warning("Seems like some message was not transferred successfully.")
             return False
 
-    if settings.get("cleanup"):
-        check_for_removed_stores(shops)
+    return True
 
-    # Start automatic intense fetch watchdog
-    if first_run and settings.get("enable_auto_intense_fetch"):
-        thread = threading.Thread(target=next_sales_loop)
-        thread.start()
+def publish_orders_data(active_orders):
+    orders = active_orders.get('orders', [])
+    has_orders = len(orders) > 0
 
-    first_run = False
+    result_ad = mqtt_client.publish(
+        "homeassistant/sensor/toogoodtogo_next_collection/config",
+        json.dumps({
+            "name": "TooGoodToGo - Next Collection",
+            "icon": "mdi:calendar-clock" if has_orders else "mdi:calendar-remove",
+            "device_class": "timestamp",
+            "entity_category": "diagnostic",
+            "state_topic": "homeassistant/sensor/toogoodtogo_next_collection/state",
+            "json_attributes_topic": "homeassistant/sensor/toogoodtogo_next_collection/attr",
+            "device": DEVICE_INFO,
+            "unique_id": "toogoodtogo_next_collection",
+        }),
+    )
+
+    result_ad_count = mqtt_client.publish(
+        "homeassistant/sensor/toogoodtogo_upcoming_orders/config",
+        json.dumps({
+            "name": "TooGoodToGo - Upcoming Orders",
+            "icon": "mdi:cart" if has_orders else "mdi:cart-off",
+            "entity_category": "diagnostic",
+            "state_topic": "homeassistant/sensor/toogoodtogo_upcoming_orders/state",
+            "json_attributes_topic": "homeassistant/sensor/toogoodtogo_upcoming_orders/attr",
+            "unit_of_measurement": "orders",
+            "device": DEVICE_INFO,
+            "unique_id": "toogoodtogo_upcoming_orders",
+        }),
+    )
+
+    if orders:
+        orders.sort(key=lambda x: x['pickup_interval']['start'])
+        next_order = orders[0]
+
+        pickup_date = next_order['pickup_interval']['start']
+        pickup_date_arrow = arrow.get(pickup_date).to(tz=settings.timezone)
+
+        result_state = mqtt_client.publish(
+            "homeassistant/sensor/toogoodtogo_next_collection/state",
+            pickup_date_arrow.isoformat(),
+        )
+
+        result_attrs = mqtt_client.publish(
+            "homeassistant/sensor/toogoodtogo_next_collection/attr",
+            json.dumps({
+                "order_id": next_order['order_id'],
+                "store_name": next_order['store_name'],
+                "store_branch": next_order['store_branch'],
+                "address": next_order['pickup_location']['address']['address_line'],
+                "pickup_start": arrow.get(next_order['pickup_interval']['start']).to(tz=settings.timezone).isoformat(),
+                "pickup_end": arrow.get(next_order['pickup_interval']['end']).to(tz=settings.timezone).isoformat(),
+                "pickup_start_human": pickup_date_arrow.humanize(only_distance=False, locale=settings.locale),
+                "status": next_order['state'],
+                "quantity": next_order['quantity'],
+                "price": next_order['total_price']['minor_units'] / pow(10, next_order['total_price']['decimals']),
+                "item_name": next_order['item_name'],
+                "store_logo": next_order['store_logo']['current_url'],
+                "item_cover_image": next_order['item_cover_image']['current_url'],
+            }),
+        )
+
+        result_state_count = mqtt_client.publish(
+            "homeassistant/sensor/toogoodtogo_upcoming_orders/state",
+            str(len(orders)),
+        )
+
+        orders_summary = [{
+            "store_name": order['store_name'],
+            "store_branch": order['store_branch'],
+            "pickup_start": arrow.get(order['pickup_interval']['start']).to(tz=settings.timezone).isoformat(),
+            "pickup_end": arrow.get(order['pickup_interval']['end']).to(tz=settings.timezone).isoformat(),
+            "quantity": order['quantity'],
+            "item_name": order['item_name'],
+        } for order in orders]
+
+        result_attrs_count = mqtt_client.publish(
+            "homeassistant/sensor/toogoodtogo_upcoming_orders/attr",
+            json.dumps({
+                "orders": orders_summary
+            }),
+        )
+
+        logger.debug(
+            f"Next collection sensor published: Autodiscover: {bool(result_ad.rc == mqtt.MQTT_ERR_SUCCESS)}, "
+            f"State: {bool(result_state.rc == mqtt.MQTT_ERR_SUCCESS)}, "
+            f"Attributes: {bool(result_attrs.rc == mqtt.MQTT_ERR_SUCCESS)}"
+        )
+        logger.debug(
+            f"Upcoming orders sensor published: Autodiscover: {bool(result_ad_count.rc == mqtt.MQTT_ERR_SUCCESS)}, "
+            f"State: {bool(result_state_count.rc == mqtt.MQTT_ERR_SUCCESS)}, "
+            f"Attributes: {bool(result_attrs_count.rc == mqtt.MQTT_ERR_SUCCESS)}"
+        )
+
+        if not (
+                result_ad.rc == result_state.rc == result_attrs.rc ==
+                result_ad_count.rc == result_state_count.rc == result_attrs_count.rc ==
+                mqtt.MQTT_ERR_SUCCESS
+        ):
+            logger.warning("Seems like some message was not transferred successfully.")
+            return False
+
+    else:
+        result_state = mqtt_client.publish(
+            "homeassistant/sensor/toogoodtogo_next_collection/state",
+            "unknown",
+        )
+        result_attrs = mqtt_client.publish(
+            "homeassistant/sensor/toogoodtogo_next_collection/attr",
+            json.dumps({}),
+        )
+        result_state_count = mqtt_client.publish(
+            "homeassistant/sensor/toogoodtogo_upcoming_orders/state",
+            "0",
+        )
+        result_attrs_count = mqtt_client.publish(
+            "homeassistant/sensor/toogoodtogo_upcoming_orders/attr",
+            json.dumps({"orders": []}),
+        )
+
+        logger.debug(
+            f"Empty sensors published: Autodiscover: {bool(result_ad.rc == mqtt.MQTT_ERR_SUCCESS)}, "
+            f"State: {bool(result_state.rc == mqtt.MQTT_ERR_SUCCESS)}, "
+            f"Attributes: {bool(result_attrs.rc == mqtt.MQTT_ERR_SUCCESS)}"
+        )
+        logger.debug(
+            f"Empty count sensor published: Autodiscover: {bool(result_ad_count.rc == mqtt.MQTT_ERR_SUCCESS)}, "
+            f"State: {bool(result_state_count.rc == mqtt.MQTT_ERR_SUCCESS)}, "
+            f"Attributes: {bool(result_attrs_count.rc == mqtt.MQTT_ERR_SUCCESS)}"
+        )
+
+        if not (
+                result_ad.rc == result_state.rc == result_attrs.rc ==
+                result_ad_count.rc == result_state_count.rc == result_attrs_count.rc ==
+                mqtt.MQTT_ERR_SUCCESS
+        ):
+            logger.warning("Seems like some message was not transferred successfully.")
+            return False
 
     return True
 
@@ -555,12 +718,7 @@ def register_fetch_sensor() -> None:
             "icon": "mdi:fast-forward",
             "state_topic": "homeassistant/switch/toogoodtogo_intense_fetch/state",
             "command_topic": "homeassistant/switch/toogoodtogo_intense_fetch/set",
-            "device": {
-                "identifiers": ["toogoodtogo_bridge"],
-                "manufacturer": "Max Winterstein",
-                "model": "TooGoodToGo favorites",
-                "name": "Too Good To Go",
-            },
+            "device": DEVICE_INFO,
             "unique_id": "toogoodtogo_intense_fetch_switch",
         }),
     )
