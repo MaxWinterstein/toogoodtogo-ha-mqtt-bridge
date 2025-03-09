@@ -86,6 +86,7 @@ def check() -> bool:
 
     return True
 
+
 def publish_stores_data(shops):
     global favourite_ids
     favourite_ids.clear()
@@ -173,8 +174,9 @@ def publish_stores_data(shops):
 
     return True
 
+
 def publish_orders_data(active_orders):
-    orders = active_orders.get('orders', [])
+    orders = active_orders.get("orders", [])
     has_orders = len(orders) > 0
 
     result_ad = mqtt_client.publish(
@@ -206,10 +208,10 @@ def publish_orders_data(active_orders):
     )
 
     if orders:
-        orders.sort(key=lambda x: x['pickup_interval']['start'])
+        orders.sort(key=lambda x: x["pickup_interval"]["start"])
         next_order = orders[0]
 
-        pickup_date = next_order['pickup_interval']['start']
+        pickup_date = next_order["pickup_interval"]["start"]
         pickup_date_arrow = arrow.get(pickup_date).to(tz=settings.timezone)
 
         result_state = mqtt_client.publish(
@@ -220,19 +222,19 @@ def publish_orders_data(active_orders):
         result_attrs = mqtt_client.publish(
             "homeassistant/sensor/toogoodtogo_next_collection/attr",
             json.dumps({
-                "order_id": next_order['order_id'],
-                "store_name": next_order['store_name'],
-                "store_branch": next_order['store_branch'],
-                "address": next_order['pickup_location']['address']['address_line'],
-                "pickup_start": arrow.get(next_order['pickup_interval']['start']).to(tz=settings.timezone).isoformat(),
-                "pickup_end": arrow.get(next_order['pickup_interval']['end']).to(tz=settings.timezone).isoformat(),
+                "order_id": next_order["order_id"],
+                "store_name": next_order["store_name"],
+                "store_branch": next_order["store_branch"],
+                "address": next_order["pickup_location"]["address"]["address_line"],
+                "pickup_start": arrow.get(next_order["pickup_interval"]["start"]).to(tz=settings.timezone).isoformat(),
+                "pickup_end": arrow.get(next_order["pickup_interval"]["end"]).to(tz=settings.timezone).isoformat(),
                 "pickup_start_human": pickup_date_arrow.humanize(only_distance=False, locale=settings.locale),
-                "status": next_order['state'],
-                "quantity": next_order['quantity'],
-                "price": next_order['total_price']['minor_units'] / pow(10, next_order['total_price']['decimals']),
-                "item_name": next_order['item_name'],
-                "store_logo": next_order['store_logo']['current_url'],
-                "item_cover_image": next_order['item_cover_image']['current_url'],
+                "status": next_order["state"],
+                "quantity": next_order["quantity"],
+                "price": next_order["total_price"]["minor_units"] / pow(10, next_order["total_price"]["decimals"]),
+                "item_name": next_order["item_name"],
+                "store_logo": next_order["store_logo"]["current_url"],
+                "item_cover_image": next_order["item_cover_image"]["current_url"],
             }),
         )
 
@@ -241,20 +243,21 @@ def publish_orders_data(active_orders):
             str(len(orders)),
         )
 
-        orders_summary = [{
-            "store_name": order['store_name'],
-            "store_branch": order['store_branch'],
-            "pickup_start": arrow.get(order['pickup_interval']['start']).to(tz=settings.timezone).isoformat(),
-            "pickup_end": arrow.get(order['pickup_interval']['end']).to(tz=settings.timezone).isoformat(),
-            "quantity": order['quantity'],
-            "item_name": order['item_name'],
-        } for order in orders]
+        orders_summary = [
+            {
+                "store_name": order["store_name"],
+                "store_branch": order["store_branch"],
+                "pickup_start": arrow.get(order["pickup_interval"]["start"]).to(tz=settings.timezone).isoformat(),
+                "pickup_end": arrow.get(order["pickup_interval"]["end"]).to(tz=settings.timezone).isoformat(),
+                "quantity": order["quantity"],
+                "item_name": order["item_name"],
+            }
+            for order in orders
+        ]
 
         result_attrs_count = mqtt_client.publish(
             "homeassistant/sensor/toogoodtogo_upcoming_orders/attr",
-            json.dumps({
-                "orders": orders_summary
-            }),
+            json.dumps({"orders": orders_summary}),
         )
 
         logger.debug(
@@ -269,9 +272,13 @@ def publish_orders_data(active_orders):
         )
 
         if not (
-                result_ad.rc == result_state.rc == result_attrs.rc ==
-                result_ad_count.rc == result_state_count.rc == result_attrs_count.rc ==
-                mqtt.MQTT_ERR_SUCCESS
+            result_ad.rc
+            == result_state.rc
+            == result_attrs.rc
+            == result_ad_count.rc
+            == result_state_count.rc
+            == result_attrs_count.rc
+            == mqtt.MQTT_ERR_SUCCESS
         ):
             logger.warning("Seems like some message was not transferred successfully.")
             return False
@@ -306,9 +313,13 @@ def publish_orders_data(active_orders):
         )
 
         if not (
-                result_ad.rc == result_state.rc == result_attrs.rc ==
-                result_ad_count.rc == result_state_count.rc == result_attrs_count.rc ==
-                mqtt.MQTT_ERR_SUCCESS
+            result_ad.rc
+            == result_state.rc
+            == result_attrs.rc
+            == result_ad_count.rc
+            == result_state_count.rc
+            == result_attrs_count.rc
+            == mqtt.MQTT_ERR_SUCCESS
         ):
             logger.warning("Seems like some message was not transferred successfully.")
             return False
