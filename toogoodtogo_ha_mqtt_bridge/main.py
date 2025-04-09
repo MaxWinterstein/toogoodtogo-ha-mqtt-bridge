@@ -77,6 +77,9 @@ def check() -> bool:
         logger.error(f"Error fetching active orders: {e}")
         return False
 
+    if not publish_last_updated():
+        return False
+
     # Start automatic intense fetch watchdog
     if first_run and settings.get("enable_auto_intense_fetch"):
         thread = threading.Thread(target=next_sales_loop)
@@ -286,7 +289,7 @@ def publish_orders_data(active_orders):
     else:
         result_state = mqtt_client.publish(
             "homeassistant/sensor/toogoodtogo_next_collection/state",
-            "unknown",
+            "null",
         )
         result_attrs = mqtt_client.publish(
             "homeassistant/sensor/toogoodtogo_next_collection/attr",
@@ -323,6 +326,34 @@ def publish_orders_data(active_orders):
         ):
             logger.warning("Seems like some message was not transferred successfully.")
             return False
+
+    return True
+
+
+def publish_last_updated() -> bool:
+    current_time = arrow.now().to(tz=settings.timezone)
+
+    result_ad = mqtt_client.publish(
+        "homeassistant/sensor/toogoodtogo_last_updated/config",
+        json.dumps({
+            "name": "TooGoodToGo - Last Updated",
+            "icon": "mdi:clock-outline",
+            "device_class": "timestamp",
+            "entity_category": "diagnostic",
+            "state_topic": "homeassistant/sensor/toogoodtogo_last_updated/state",
+            "device": DEVICE_INFO,
+            "unique_id": "toogoodtogo_last_updated",
+        }),
+    )
+
+    result_state = mqtt_client.publish(
+        "homeassistant/sensor/toogoodtogo_last_updated/state",
+        current_time.isoformat(),
+    )
+
+    if not result_ad.rc == result_state.rc == mqtt.MQTT_ERR_SUCCESS:
+        logger.warning("Seems like some message was not transferred successfully.")
+        return False
 
     return True
 
