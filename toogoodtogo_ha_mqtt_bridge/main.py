@@ -6,7 +6,6 @@ import os
 import random
 import threading
 import time
-import uuid
 from datetime import datetime, timedelta
 from pathlib import Path
 from time import sleep
@@ -34,7 +33,7 @@ coloredlogs.install(
 
 mqtt_client: mqtt.Client = None  # type: ignore[assignment]
 first_run = True
-tgtg_client: MyTgtgClient | None = None
+tgtg_client: TgtgClient = None  # type: ignore[no-any-unimported]
 tgtg_version: str | None = None
 intense_fetch_thread = None
 tokens: dict[Any, Any] = {}
@@ -45,26 +44,16 @@ favourite_ids: list[int] = []
 scheduled_jobs: list[Any] = []
 
 
-class MyTgtgClient(TgtgClient):  # type: ignore[no-any-unimported]
-    correlation_id = str(uuid.uuid4())
-
-    @property
-    def _headers(self):  # type: ignore[no-untyped-def]
-        headers = super()._headers
-        headers["x-correlation-id"] = self.correlation_id
-        return headers
-
-
 def check() -> bool:
     global first_run
     global favourite_ids
     favourite_ids.clear()
 
     if not first_run:
-        tgtg_client.login()  # type: ignore[union-attr]
+        tgtg_client.login()
         write_token_file()
 
-    shops = tgtg_client.get_items(page_size=400)  # type: ignore[union-attr]
+    shops = tgtg_client.get_items(page_size=400)
     for shop in shops:
         stock = shop["items_available"]
         item_id = shop["item"]["item_id"]
@@ -207,12 +196,12 @@ def is_latest_token_rev() -> Any:
 def write_token_file() -> None:
     global tokens
     tgtg_tokens = {
-        "access_token": tgtg_client.access_token,  # type: ignore[union-attr]
-        "access_token_lifetime": tgtg_client.access_token_lifetime,  # type: ignore[union-attr]
-        "refresh_token": tgtg_client.refresh_token,  # type: ignore[union-attr]
-        "cookie": tgtg_client.cookie,  # type: ignore[union-attr]
-        "last_time_token_refreshed": str(tgtg_client.last_time_token_refreshed),  # type: ignore[union-attr]
-        "ua": tgtg_client.user_agent,  # type: ignore[union-attr]
+        "access_token": tgtg_client.access_token,
+        "access_token_lifetime": tgtg_client.access_token_lifetime,
+        "refresh_token": tgtg_client.refresh_token,
+        "cookie": tgtg_client.cookie,
+        "last_time_token_refreshed": str(tgtg_client.last_time_token_refreshed),
+        "ua": tgtg_client.user_agent,
         "token_version": tgtg_version,
         "rev": tokens_rev,
     }
@@ -275,7 +264,7 @@ def update_ua() -> None:
 
 def rebuild_tgtg_client() -> None:
     global tgtg_client
-    tgtg_client = MyTgtgClient(
+    tgtg_client = TgtgClient(
         cookie=tokens["cookie"],
         access_token=tokens["access_token"],
         refresh_token=tokens["refresh_token"],
@@ -316,8 +305,8 @@ def fetch_loop(event: Any) -> None:
 
     create_data_dir()
     token_exits = check_existing_token_file()
-    tgtg_client.login()  # type: ignore[union-attr]
-    if not token_exits and tgtg_client.access_token:  # type: ignore[union-attr]
+    tgtg_client.login()
+    if not token_exits and tgtg_client.access_token:
         write_token_file()
 
     event.wait(calc_next_run())
@@ -341,7 +330,7 @@ def next_sales_loop() -> None:
     while True:
         if favourite_ids:
             for fav_id in favourite_ids:
-                item = tgtg_client.get_item(item_id=fav_id)  # type: ignore[union-attr]
+                item = tgtg_client.get_item(item_id=fav_id)
                 if "next_sales_window_purchase_start" in item:
                     next_sales_window = arrow.get(item["next_sales_window_purchase_start"]).to(tz=settings.timezone)
                     if next_sales_window > arrow.now(tz=settings.timezone):
@@ -484,7 +473,7 @@ def calc_timeout() -> Any:
         itr = croniter(cron_schedule, base)
         for _ in range(2):
             next_run = itr.get_next(datetime)
-        watchdog_timeout = (next_run - now).seconds + tgtg_client.timeout  # type: ignore[union-attr]
+        watchdog_timeout = (next_run - now).seconds + tgtg_client.timeout
         return watchdog_timeout
     else:
         exit_from_thread("Invalid cron schedule", 1)
@@ -592,7 +581,7 @@ def run_pending_schedules() -> None:
 @click.version_option(package_name="toogoodtogo_ha_mqtt_bridge")
 def start() -> None:
     global tgtg_client, watchdog, mqtt_client
-    tgtg_client = MyTgtgClient(
+    tgtg_client = TgtgClient(
         email=settings.tgtg.email, language=settings.tgtg.language, timeout=30, user_agent=build_ua()
     )
 
