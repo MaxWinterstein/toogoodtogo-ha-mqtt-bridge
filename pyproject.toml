@@ -5,7 +5,7 @@ description = "Small python tool to forward stock of you favourite stores to Hom
 authors = [{ name = "Max Winterstein", email = "github@winterstein.mx" }]
 readme = "README.md"
 keywords = ['python']
-requires-python = "==3.12.*"
+requires-python = "==3.13.*"
 dependencies = [
   "paho-mqtt==2.1.0",
   "dynaconf",
