@@ -13,7 +13,7 @@ jobs:
         uses: astral-sh/setup-uv@v5
         with:
           # renovate: datasource=github-releases depName=astral-sh/uv
-          version: "0.5.4"
+          version: "0.7.2"
 
       - name: Set up Python
         run: uv python install
