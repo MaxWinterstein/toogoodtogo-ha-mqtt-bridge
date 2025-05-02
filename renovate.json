@@ -1,16 +1,8 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["config:recommended", "schedule:monthly"],
-  "regexManagers": [
-    {
-      "fileMatch": ["^\\.github/workflows/.*\\.ya?ml$"],
-      "matchStrings": [
-        "# renovate: datasource=github-releases depName=astral-sh/uv\\s*\\n\\s+version:\\s+\"(?<currentValue>.*?)\""
-      ],
-      "datasourceTemplate": "github-releases",
-      "depNameTemplate": "astral-sh/uv",
-      "versioningTemplate": "semver"
-    }
+  "extends": [
+    "config:recommended",
+    "schedule:monthly"
   ],
   "customManagers": [
     {
@@ -25,9 +17,13 @@
     },
     {
       "customType": "regex",
-      "fileMatch": ["\\.yml$"],
+      "fileMatch": [
+        "\\.yml$"
+      ],
       "datasourceTemplate": "custom.pkgx",
-      "matchStrings": ["\\s*(?<depName>.*?): \"(?<currentValue>.*?)\""],
+      "matchStrings": [
+        "\\s*(?<depName>.*?): \"(?<currentValue>.*?)\""
+      ],
       "versioningTemplate": "{{#if versioning}}{{{versioning}}}{{else}}semver{{/if}}"
     }
   ],
@@ -40,7 +36,9 @@
   "packageRules": [
     {
       "groupName": "uv",
-      "matchPackageNames": ["/uv/"]
+      "matchPackageNames": [
+        "/uv/"
+      ]
     }
   ]
 }
