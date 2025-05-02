@@ -1,9 +1,6 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": [
-    "config:recommended",
-    "schedule:monthly"
-  ],
+  "extends": ["config:recommended", "schedule:monthly"],
   "customManagers": [
     {
       "customType": "regex",
@@ -17,13 +14,9 @@
     },
     {
       "customType": "regex",
-      "fileMatch": [
-        "\\.yml$"
-      ],
+      "fileMatch": ["\\.yml$"],
       "datasourceTemplate": "custom.pkgx",
-      "matchStrings": [
-        "\\s*(?<depName>.*?): \"(?<currentValue>.*?)\""
-      ],
+      "matchStrings": ["\\s*(?<depName>.*?): \"(?<currentValue>.*?)\""],
       "versioningTemplate": "{{#if versioning}}{{{versioning}}}{{else}}semver{{/if}}"
     }
   ],
@@ -36,9 +29,7 @@
   "packageRules": [
     {
       "groupName": "uv",
-      "matchPackageNames": [
-        "/uv/"
-      ]
+      "matchPackageNames": ["/uv/"]
     }
   ]
 }
