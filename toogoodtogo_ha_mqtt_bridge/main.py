@@ -62,8 +62,8 @@ def check() -> bool:
         shops = tgtg_client.get_items(page_size=400)
         if not publish_stores_data(shops):
             return False
-    except Exception as e:
-        logger.error(f"Error fetching stores: {e}")
+    except Exception:
+        logging.exception("Error fetching stores")
         return False
 
     if settings.get("cleanup"):
@@ -73,8 +73,8 @@ def check() -> bool:
         active_orders = tgtg_client.get_active()
         if not publish_orders_data(active_orders):
             return False
-    except Exception as e:
-        logger.error(f"Error fetching active orders: {e}")
+    except Exception:
+        logging.exception("Error fetching active orders")
         return False
 
     if not publish_last_updated():
