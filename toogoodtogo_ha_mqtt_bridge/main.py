@@ -90,7 +90,7 @@ def check() -> bool:
     return True
 
 
-def publish_stores_data(shops):
+def publish_stores_data(shops: list[Any]) -> bool:
     global favourite_ids
     favourite_ids.clear()
 
@@ -178,7 +178,7 @@ def publish_stores_data(shops):
     return True
 
 
-def publish_orders_data(active_orders):
+def publish_orders_data(active_orders: dict) -> bool:
     orders = active_orders.get("orders", [])
     has_orders = len(orders) > 0
 
