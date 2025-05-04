@@ -226,6 +226,49 @@ mode: parallel
 max: 10
 ```
 
+### Pickup Reminder
+
+```yaml
+alias: TGTG Pickup Reminder
+description: ""
+
+triggers:
+  - trigger: time
+    at:
+      entity_id: sensor.too_good_to_go_toogoodtogo_next_collection
+      offset: "-00:30:00"
+
+actions:
+  - variables:
+      next_collection_entity: sensor.too_good_to_go_toogoodtogo_next_collection
+      notification_message: |-
+        🛍️ <b>Too Good To Go Pickup Reminder</b>
+
+        <b>Item:</b> {{ state_attr(next_collection_entity, 'item_name') }}
+        <b>Store:</b> {{ state_attr(next_collection_entity, 'store_name') }}
+        <b>Time:</b> {{ as_timestamp(state_attr(next_collection_entity, 'pickup_start')) | timestamp_custom('%H:%M') }} - {{ as_timestamp(state_attr(next_collection_entity, 'pickup_end')) | timestamp_custom('%H:%M') }} <i>({{ state_attr(next_collection_entity, 'pickup_start_human') }})</i>
+        <b>Address:</b> {{ state_attr(next_collection_entity, 'address') }}
+        <b>Maps:</b> <a href="https://www.google.com/maps/search/?api=1&query={{ state_attr(next_collection_entity, 'address') | urlencode }}">Open in Google Maps</a>
+
+  - action: telegram_bot.send_message
+    metadata: {}
+    data:
+      disable_notification: true
+      target: <TELEGRAM USERID>
+      parse_mode: html
+      message: "{{ notification_message }}"
+```
+
 ## Development
 
 This project uses [pre-commit](https://pre-commit.com/) to make sure the code keeps clean and similar. Usage is highly advised.
+
+## Contributors
+
+Big thanks to everyone contributing <3
+
+<a href="https://github.com/maxwinterstein/toogoodtogo-ha-mqtt-bridge/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=maxwinterstein/toogoodtogo-ha-mqtt-bridge" />
+</a>
+
+Made with [contrib.rocks](https://contrib.rocks).
