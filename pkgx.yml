@@ -1,5 +1,5 @@
 dependencies:
   prettier.io: "3.5.3"
   pre-commit.com: "4.2.0"
-  astral.sh/uv: "0.7.2"
+  astral.sh/uv: "0.7.20"
   cli.github.com: "2.74.1"
