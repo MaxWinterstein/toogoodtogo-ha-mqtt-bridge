@@ -124,12 +124,16 @@ def publish_stores_data(shops: list[Any]) -> bool:
         # prepare attrs
         if shop["item"].get("price"):
             price = shop["item"]["price"]["minor_units"] / pow(10, shop["item"]["price"]["decimals"])
+        elif shop["item"].get("item_price"):
+            price = shop["item"]["item_price"]["minor_units"] / pow(10, shop["item"]["item_price"]["decimals"])
         elif shop["item"].get("price_including_taxes"):
             price = shop["item"]["price_including_taxes"]["minor_units"] / pow(
                 10, shop["item"]["price_including_taxes"]["decimals"]
             )
         else:
             logger.error("Can't find price")
+            logger.debug("Content of item obj:")
+            logger.debug(json.dumps(shop["item"]))
             price = 0
 
         pickup_start_date = None if not stock else arrow.get(shop["pickup_interval"]["start"]).to(tz=settings.timezone)
