@@ -145,7 +145,7 @@ Add the following piece of code into /developer-tools/template in HomeAssistant.
 
 ```yaml
 {%- for state in states -%}
-    {%- if (state.entity_id.startswith('sensor.toogoodtogo_'))-%}
+    {%- if (state.entity_id.startswith('sensor.too_good_to_go_'))-%}
       {{state.entity_id}},
     {%- endif -%}
 {%- endfor -%}
