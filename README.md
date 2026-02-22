@@ -8,7 +8,7 @@ Stores are automatically created via MQTT Discovery and contain some addition at
 
 ![Screen Shot 2022-06-26 at 19 24 32](https://user-images.githubusercontent.com/5927148/175826396-0a9c5c16-ae7f-4809-a8a7-5eda18b96370.png)
 
-## Installation:
+## Installation
 
 ### Home Assistant Add-On
 
@@ -20,7 +20,7 @@ Docker image is created automatically and available at dockerhub: [maxwinterstei
 
 ### Native
 
-This project uses some awesome tools for better developer expirence:
+This project uses some awesome tools for better developer experience:
 
 - [`direnv`](https://direnv.net/)
 - [`pkgx`](https://pkgx.dev/)
@@ -68,7 +68,7 @@ Create some settings file called `settings.local.json` (see [`settings.example.j
 
 #### `tgtg.polling_schedule`
 
-sets the polling interval in cron notation. For more Infomation have a look here: https://crontab.guru/
+sets the polling interval in cron notation. For more Information have a look here: https://crontab.guru/
 
 #### `tgtg.intense_fetch` (optional)
 
@@ -77,7 +77,7 @@ Ideal for those boxes you always miss!
 With the `interval`, the time between the queries can be controlled.
 With the setting `period_of_time` the duration of the intense fetch can be defined.
 The smallest interval is 10 seconds, and the maximum duration of the intense_fetch is 60 minutes.
-**Attention:** This is meant for expierenced users as you might get blocked for a certain amount of time by toogoodtogo.
+**Attention:** This is meant for experienced users as you might get blocked for a certain amount of time by toogoodtogo.
 
 #### `enable_auto_intense_fetch` (optional)
 
