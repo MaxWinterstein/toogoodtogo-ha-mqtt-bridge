@@ -5,6 +5,9 @@ description = "Small python tool to forward stock of you favourite stores to Hom
 authors = [{ name = "Max Winterstein", email = "github@winterstein.mx" }]
 readme = "README.md"
 keywords = ['python']
+classifiers = [
+  "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+]
 requires-python = "==3.12.*"
 dependencies = [
   "paho-mqtt==2.1.0",
