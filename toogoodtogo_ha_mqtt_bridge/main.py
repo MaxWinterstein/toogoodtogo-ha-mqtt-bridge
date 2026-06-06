@@ -138,8 +138,8 @@ def publish_stores_data(shops: list[Any]) -> bool:
 
         pickup_start_date = None if not stock else arrow.get(shop["pickup_interval"]["start"]).to(tz=settings.timezone)
         pickup_end_date = None if not stock else arrow.get(shop["pickup_interval"]["end"]).to(tz=settings.timezone)
-        pickup_start_str = ("Unknown" if stock == 0 else pickup_start_date.to(tz=settings.timezone).isoformat(),)  # type: ignore[union-attr]
-        pickup_end_str = ("Unknown" if stock == 0 else pickup_end_date.to(tz=settings.timezone).isoformat(),)  # type: ignore[union-attr]
+        pickup_start_str = "Unknown" if stock == 0 else pickup_start_date.to(tz=settings.timezone).isoformat()  # type: ignore[union-attr]
+        pickup_end_str = "Unknown" if stock == 0 else pickup_end_date.to(tz=settings.timezone).isoformat()  # type: ignore[union-attr]
         pickup_start_human = (
             "Unknown" if stock == 0 else pickup_start_date.humanize(only_distance=False, locale=settings.locale)  # type: ignore[union-attr]
         )
