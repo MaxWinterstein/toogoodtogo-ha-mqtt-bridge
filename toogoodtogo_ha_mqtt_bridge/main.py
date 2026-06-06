@@ -56,13 +56,13 @@ def entity_naming(object_id: str, name: str) -> dict[str, Any]:
 
     Pins ``object_id`` to the stable unique id so Home Assistant derives the ``entity_id``
     from it (e.g. ``sensor.toogoodtogo_123456``) instead of from the volatile store display
-    name, and sets ``has_entity_name`` so the device brand ("Too Good To Go") is not
-    duplicated in the friendly name.
+    name. ``has_entity_name`` is deliberately NOT set: with it, Home Assistant builds the
+    entity_id from the device + entity name and ignores ``object_id`` entirely.
 
     Note: this only affects newly discovered entities. Home Assistant freezes an existing
     entity's ``entity_id`` at registration, so already-known sensors keep their current id.
     """
-    return {"name": name, "object_id": object_id, "has_entity_name": True}
+    return {"name": name, "object_id": object_id}
 
 
 def check() -> bool:
@@ -119,7 +119,7 @@ def publish_stores_data(shops: list[Any]) -> bool:
         result_ad = mqtt_client.publish(
             f"homeassistant/sensor/toogoodtogo_bridge/{item_id}/config",
             json.dumps({
-                **entity_naming(f"toogoodtogo_{item_id}", shop["display_name"]),
+                **entity_naming(f"toogoodtogo_{item_id}", f"TooGoodToGo - {shop['display_name']}"),
                 "icon": "mdi:food" if stock > 0 else "mdi:food-off",
                 "state_topic": f"homeassistant/sensor/toogoodtogo_{item_id}/state",
                 "json_attributes_topic": f"homeassistant/sensor/toogoodtogo_{item_id}/attr",
@@ -203,7 +203,7 @@ def publish_orders_data(active_orders: dict) -> bool:
     result_ad = mqtt_client.publish(
         "homeassistant/sensor/toogoodtogo_next_collection/config",
         json.dumps({
-            **entity_naming("toogoodtogo_next_collection", "Next Collection"),
+            **entity_naming("toogoodtogo_next_collection", "TooGoodToGo - Next Collection"),
             "icon": "mdi:calendar-clock" if has_orders else "mdi:calendar-remove",
             "device_class": "timestamp",
             "entity_category": "diagnostic",
@@ -217,7 +217,7 @@ def publish_orders_data(active_orders: dict) -> bool:
     result_ad_count = mqtt_client.publish(
         "homeassistant/sensor/toogoodtogo_upcoming_orders/config",
         json.dumps({
-            **entity_naming("toogoodtogo_upcoming_orders", "Upcoming Orders"),
+            **entity_naming("toogoodtogo_upcoming_orders", "TooGoodToGo - Upcoming Orders"),
             "icon": "mdi:cart" if has_orders else "mdi:cart-off",
             "entity_category": "diagnostic",
             "state_topic": "homeassistant/sensor/toogoodtogo_upcoming_orders/state",
@@ -354,7 +354,7 @@ def publish_last_updated() -> bool:
     result_ad = mqtt_client.publish(
         "homeassistant/sensor/toogoodtogo_last_updated/config",
         json.dumps({
-            **entity_naming("toogoodtogo_last_updated", "Last Updated"),
+            **entity_naming("toogoodtogo_last_updated", "TooGoodToGo - Last Updated"),
             "icon": "mdi:clock-outline",
             "device_class": "timestamp",
             "entity_category": "diagnostic",
