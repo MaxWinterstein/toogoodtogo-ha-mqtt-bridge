@@ -21,7 +21,7 @@ dependencies = [
   "packaging",
   "freezegun",
   "schedule",
-  "click==8.2.1",
+  "click==8.4.1",
 ]
 
 [project.urls]
