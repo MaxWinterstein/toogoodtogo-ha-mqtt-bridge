@@ -1,15 +1,22 @@
 name: Python compatibility probe
 
-# Informational, non-gating probe: does the test suite run on newer Python
+# Informational, NON-GATING probe: does the test suite run on newer Python
 # versions? The authoritative test (pinned 3.12 + locked deps) lives in
 # pytest.yaml. This probe keeps requires-python ("==3.12.*") and the lockfile
 # untouched; it installs the project with --ignore-requires-python and lets pip
 # resolve dependencies fresh per version, which mirrors what a real Python bump
 # (e.g. a Renovate "Update Python" PR) actually does.
+#
+# A red result here is INFORMATIONAL ONLY: a dependency that fails to import on
+# a newer interpreter and a genuine test regression both surface as a failure.
+# Do NOT add this workflow to required status checks — it must never block a merge.
 
 on:
-  push:
+  pull_request:
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   compat:
@@ -22,7 +29,7 @@ jobs:
         python-version: ["3.12", "3.13", "3.14"]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0 # setuptools_scm needs history/tags to derive the version
 
@@ -36,3 +43,8 @@ jobs:
 
       - name: Run tests
         run: pytest
+
+      - name: Smoke-run the entrypoint
+        # Cheapest "does the app import and start under this interpreter" check;
+        # catches import-time breakage the thin test suite would miss.
+        run: python toogoodtogo_ha_mqtt_bridge/main.py --version
