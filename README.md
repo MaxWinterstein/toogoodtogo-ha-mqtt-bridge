@@ -263,6 +263,8 @@ actions:
 
 This project uses [pre-commit](https://pre-commit.com/) to make sure the code keeps clean and similar. Usage is highly advised.
 
+See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the full development setup and the checks to run before opening a pull request.
+
 ## Contributors
 
 Big thanks to everyone contributing <3
@@ -272,3 +274,10 @@ Big thanks to everyone contributing <3
 </a>
 
 Made with [contrib.rocks](https://contrib.rocks).
+
+## License
+
+Copyright (c) 2026 Max Winterstein
+
+This project is licensed under the **GNU General Public License v3.0** — see the
+[`LICENSE`](LICENSE) file for the full text.
