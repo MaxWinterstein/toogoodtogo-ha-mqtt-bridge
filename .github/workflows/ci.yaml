@@ -7,7 +7,9 @@ name: CI
 # fail-fast is disabled so a failure on one version does not mask the others.
 # There is no branch protection today, so all results are informational; if
 # protection is added later, mark "test (3.12)" (the deploy target) required and
-# leave the newer versions optional.
+# leave the newer versions optional. Keep 3.13/3.14 NON-required: the universal
+# lock has no cp314 wheels for some C-extension deps (e.g. PyYAML), so those legs
+# build from sdist and are forward-looking probes, not a hard guarantee.
 
 on:
   pull_request:
