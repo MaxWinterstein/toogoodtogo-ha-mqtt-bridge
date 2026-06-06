@@ -1,0 +1,38 @@
+name: Python compatibility probe
+
+# Informational, non-gating probe: does the test suite run on newer Python
+# versions? The authoritative test (pinned 3.12 + locked deps) lives in
+# pytest.yaml. This probe keeps requires-python ("==3.12.*") and the lockfile
+# untouched; it installs the project with --ignore-requires-python and lets pip
+# resolve dependencies fresh per version, which mirrors what a real Python bump
+# (e.g. a Renovate "Update Python" PR) actually does.
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  compat:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false # one version failing should not hide the others
+      matrix:
+        # 3.12 is the current deploy target (control); 3.13 and 3.14 are the
+        # forward-looking probes.
+        python-version: ["3.12", "3.13", "3.14"]
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # setuptools_scm needs history/tags to derive the version
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install project (bypassing the requires-python pin) and pytest
+        run: pip install --ignore-requires-python -e . pytest
+
+      - name: Run tests
+        run: pytest
