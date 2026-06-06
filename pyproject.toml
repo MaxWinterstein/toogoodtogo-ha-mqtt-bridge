@@ -29,8 +29,8 @@ Homepage = "https://MaxWinterstein.github.io/toogoodtogo-ha-mqtt-bridge/"
 Repository = "https://github.com/MaxWinterstein/toogoodtogo-ha-mqtt-bridge"
 Documentation = "https://MaxWinterstein.github.io/toogoodtogo-ha-mqtt-bridge/"
 
-[tool.uv]
-dev-dependencies = [
+[dependency-groups]
+dev = [
   "pytest>=7.2.0",
   "pre-commit>=2.20.0",
   "deptry>=0.20.0",
