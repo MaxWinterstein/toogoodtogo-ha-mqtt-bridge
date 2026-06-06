@@ -1,4 +1,5 @@
 import json
+from collections.abc import Generator
 from unittest.mock import MagicMock
 
 import paho.mqtt.client as mqtt
@@ -18,11 +19,21 @@ def _fake_shop(stock: int) -> dict:
     }
 
 
-@pytest.mark.parametrize("stock", [3, 0])
-def test_publish_stores_data_attrs(stock: int) -> None:
+@pytest.fixture
+def _settings_env() -> Generator[None, None, None]:
+    # dynaconf's settings object has no __delitem__, so snapshot/restore the
+    # keys we touch instead of using monkeypatch.setitem (whose teardown deletes).
+    keys = ("timezone", "locale")
+    original = {key: settings.get(key) for key in keys}
     settings["timezone"] = "Europe/Berlin"
     settings["locale"] = "en_us"
+    yield
+    for key, value in original.items():
+        settings[key] = value
 
+
+@pytest.mark.parametrize("stock", [3, 0])
+def test_publish_stores_data_attrs(stock: int, _settings_env: None) -> None:
     published: dict[str, str] = {}
 
     def fake_publish(topic: str, payload: str | None = None) -> MagicMock:
