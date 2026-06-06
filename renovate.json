@@ -4,9 +4,7 @@
   "customManagers": [
     {
       "customType": "regex",
-      "managerFilePatterns": [
-        "/\\.github/workflows/.*\\.ya?ml$/"
-      ],
+      "managerFilePatterns": ["/\\.github/workflows/.*\\.ya?ml$/"],
       "datasourceTemplate": "github-releases",
       "depNameTemplate": "astral-sh/uv",
       "versioningTemplate": "semver",
@@ -26,9 +24,7 @@
     },
     {
       "customType": "regex",
-      "managerFilePatterns": [
-        "/\\.yml$/"
-      ],
+      "managerFilePatterns": ["/\\.yml$/"],
       "datasourceTemplate": "custom.pkgx",
       "matchStrings": ["\\s*(?<depName>.*?): \"(?<currentValue>.*?)\""],
       "versioningTemplate": "{{#if versioning}}{{{versioning}}}{{else}}semver{{/if}}"
