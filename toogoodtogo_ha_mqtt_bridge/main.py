@@ -549,7 +549,8 @@ def next_sales_loop() -> None:
                         global scheduled_jobs
                         if not any(d["name"] == schedule_name for d in scheduled_jobs):
                             job = (
-                                schedule.every()
+                                schedule
+                                .every()
                                 .day.at(next_sales_window.shift(minutes=-1).format("HH:mm"))
                                 .do(trigger_intense_fetch)
                             )
