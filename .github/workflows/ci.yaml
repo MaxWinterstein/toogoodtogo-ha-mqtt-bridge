@@ -1,0 +1,53 @@
+name: CI
+
+# Single source of truth for tests + type-checking, run across every supported
+# Python version (see requires-python in pyproject.toml). Replaces the former
+# pytest.yaml, pr.yaml (mypy) and python-compat.yaml workflows.
+#
+# fail-fast is disabled so a failure on one version does not mask the others.
+# There is no branch protection today, so all results are informational; if
+# protection is added later, mark "test (3.12)" (the deploy target) required and
+# leave the newer versions optional. Keep 3.13/3.14 NON-required: the universal
+# lock has no cp314 wheels for some C-extension deps (e.g. PyYAML), so those legs
+# build from sdist and are forward-looking probes, not a hard guarantee.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Keep in sync with requires-python (">=3.12,<3.15"). 3.12 is the
+        # current Docker deploy target; 3.13/3.14 are the rest of the range.
+        python-version: ["3.12", "3.13", "3.14"]
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0 # setuptools_scm needs history/tags to derive the version
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v8.2.0
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install the project
+        run: uv sync --locked --all-extras --dev
+
+      - name: Run pytest
+        run: uv run pytest
+
+      - name: Smoke-run the entrypoint
+        run: uv run python toogoodtogo_ha_mqtt_bridge/main.py --version
+
+      - name: Run mypy
+        run: uv run mypy
