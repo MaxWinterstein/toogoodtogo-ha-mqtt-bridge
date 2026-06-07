@@ -42,6 +42,9 @@ tokens_rev = 2  # in case of tokens.json changes, bump this
 watchdog: Watchdog = None  # type: ignore[assignment]
 watchdog_timeout = 0
 favourite_ids: list[int] = []
+# Item ids from the last *fully successful* publish_stores_data run. The full cleanup
+# reconciles against this snapshot so it never acts on a partially-built favourites list.
+last_successful_favourite_ids: set[str] = set()
 scheduled_jobs: list[Any] = []
 
 DEVICE_INFO = {
@@ -131,16 +134,18 @@ def full_cleanup(current_item_ids: set[str]) -> None:
 
 
 def cleanup_loop() -> None:
-    """Run :func:`full_cleanup` once the first favourites fetch has succeeded, then daily."""
-    while not favourite_ids:  # wait for a successful fetch so we reconcile against a real list
+    """Run :func:`full_cleanup` once the first fetch has succeeded, then daily."""
+    while not last_successful_favourite_ids:  # wait for a trusted favourites snapshot
         sleep(30)
-    full_cleanup({str(item_id) for item_id in favourite_ids})
     while True:
+        try:
+            full_cleanup(set(last_successful_favourite_ids))
+        except Exception:
+            # A transient broker error must not permanently stop the daily cleanup.
+            logger.exception("Full cleanup run failed; will retry on the next schedule")
         now = datetime.now()
         next_run = croniter("0 4 * * *", now).get_next(datetime)
         sleep((next_run - now).seconds)
-        if favourite_ids:
-            full_cleanup({str(item_id) for item_id in favourite_ids})
 
 
 def check() -> bool:
@@ -183,7 +188,7 @@ def check() -> bool:
 
 
 def publish_stores_data(shops: list[Any]) -> bool:
-    global favourite_ids
+    global favourite_ids, last_successful_favourite_ids
     favourite_ids.clear()
 
     for shop in shops:
@@ -271,6 +276,8 @@ def publish_stores_data(shops: list[Any]) -> bool:
             logger.warning("Seems like some message was not transferred successfully.")
             return False
 
+    # Only now, after a fully successful run, record the trusted snapshot for the full cleanup.
+    last_successful_favourite_ids = {str(item_id) for item_id in favourite_ids}
     return True
 
 
