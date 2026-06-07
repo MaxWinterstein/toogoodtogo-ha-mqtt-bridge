@@ -35,9 +35,11 @@ def _settings_env() -> Generator[None, None, None]:
 @pytest.mark.parametrize("stock", [3, 0])
 def test_publish_stores_data_attrs(stock: int, _settings_env: None) -> None:
     published: dict[str, str] = {}
+    retained: dict[str, bool] = {}
 
-    def fake_publish(topic: str, payload: str | None = None) -> MagicMock:
+    def fake_publish(topic: str, payload: str | None = None, retain: bool = False) -> MagicMock:
         published[topic] = payload  # type: ignore[assignment]
+        retained[topic] = retain
         return MagicMock(rc=mqtt.MQTT_ERR_SUCCESS)
 
     main.mqtt_client = MagicMock()
@@ -52,6 +54,11 @@ def test_publish_stores_data_attrs(stock: int, _settings_env: None) -> None:
     assert isinstance(attrs["pickup_end"], str)
     assert attrs["price"] == 4.99
     assert attrs["stock_available"] is (stock > 0)
+
+    # State/attribute messages must be retained so a freshly discovered entity shows its
+    # value immediately on subscribe instead of 'unknown' until the next poll (issue #85).
+    assert retained["homeassistant/sensor/toogoodtogo_123/state"] is True
+    assert retained["homeassistant/sensor/toogoodtogo_123/attr"] is True
 
     # Stable entity-id naming: default_entity_id (domain-prefixed) pins the entity_id to the
     # immutable item id (sensor.toogoodtogo_<id>) instead of the volatile store name. name is
