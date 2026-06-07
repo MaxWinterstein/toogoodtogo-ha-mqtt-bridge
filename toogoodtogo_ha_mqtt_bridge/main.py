@@ -4,6 +4,7 @@ import json
 import logging
 import os
 import random
+import re
 import threading
 import time
 from datetime import datetime, timedelta
@@ -78,6 +79,68 @@ def publish_state(topic: str, payload: str | None = None) -> Any:
     subscribed to its topic (issue #85).
     """
     return mqtt_client.publish(topic, payload, retain=True)
+
+
+CLEANUP_SCAN_SECONDS = 5  # how long to collect retained messages from the broker
+
+
+def full_cleanup(current_item_ids: set[str]) -> None:
+    """Remove Home Assistant entities for stores that are no longer favourites.
+
+    Unlike :func:`check_for_removed_stores` (which only knows stores recorded in
+    ``known_shops.json``), this reconciles against the MQTT broker itself: it discovers every
+    store entity the broker still holds via their retained state topics and clears
+    (config + state + attr) any whose item id is not in ``current_item_ids``. This makes
+    cleanup robust to a fresh add-on install or a wiped data dir, where ``known_shops.json`` is
+    gone. Opt-in via the ``full_cleanup`` setting.
+    """
+    if not current_item_ids:
+        # Never reconcile against an empty list - that would delete every entity.
+        logger.warning("Full cleanup skipped: no current favourites to reconcile against")
+        return
+
+    seen: set[str] = set()
+    store_state_topic = re.compile(r"^homeassistant/sensor/toogoodtogo_(\d+)/state$")
+
+    def on_scan_message(client: Any, userdata: Any, message: Any) -> None:
+        # A numeric id means a store sensor; this structurally excludes the fixed diagnostic
+        # sensors (next_collection / upcoming_orders / last_updated) and the switch.
+        match = store_state_topic.match(message.topic)
+        if match and message.payload:  # retained and non-empty => a live store entity
+            seen.add(match.group(1))
+
+    scanner = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id="toogoodtogo-cleanup-scan")
+    if settings.mqtt.username:
+        scanner.username_pw_set(username=settings.mqtt.username, password=settings.mqtt.password)
+    scanner.on_message = on_scan_message
+    scanner.connect(host=settings.mqtt.host, port=int(settings.mqtt.port))
+    scanner.loop_start()
+    scanner.subscribe("homeassistant/sensor/+/state")  # retained messages are replayed on subscribe
+    sleep(CLEANUP_SCAN_SECONDS)
+    scanner.loop_stop()
+    scanner.disconnect()
+
+    orphans = seen - current_item_ids
+    for item_id in orphans:
+        logger.info(f"Full cleanup: removing orphaned store {item_id}")
+        # An empty retained payload deletes the retained message and removes the HA entity.
+        mqtt_client.publish(f"homeassistant/sensor/toogoodtogo_bridge/{item_id}/config", retain=True)
+        mqtt_client.publish(f"homeassistant/sensor/toogoodtogo_{item_id}/state", retain=True)
+        mqtt_client.publish(f"homeassistant/sensor/toogoodtogo_{item_id}/attr", retain=True)
+    logger.info(f"Full cleanup finished: removed {len(orphans)} orphan(s), kept {len(seen & current_item_ids)}")
+
+
+def cleanup_loop() -> None:
+    """Run :func:`full_cleanup` once the first favourites fetch has succeeded, then daily."""
+    while not favourite_ids:  # wait for a successful fetch so we reconcile against a real list
+        sleep(30)
+    full_cleanup({str(item_id) for item_id in favourite_ids})
+    while True:
+        now = datetime.now()
+        next_run = croniter("0 4 * * *", now).get_next(datetime)
+        sleep((next_run - now).seconds)
+        if favourite_ids:
+            full_cleanup({str(item_id) for item_id in favourite_ids})
 
 
 def check() -> bool:
@@ -529,7 +592,9 @@ def check_for_removed_stores(shops: list[Any]) -> None:
         deprecated_items = [x for x in known_items if x not in checked_items]
         for deprecated_item in deprecated_items:
             logger.info(f"Shop {deprecated_item} was not checked, will send remove message")
-            result = mqtt_client.publish(f"homeassistant/sensor/toogoodtogo_{deprecated_item}/config")
+            # NB: the discovery config lives under the .../toogoodtogo_bridge/<id>/config topic
+            # (with the node id); publish an empty retained payload there to remove the entity.
+            result = mqtt_client.publish(f"homeassistant/sensor/toogoodtogo_bridge/{deprecated_item}/config", retain=True)
             # Clear the now-retained state/attribute topics too, so a removed store leaves no
             # orphan retained message on the broker (an empty retained payload deletes it).
             publish_state(f"homeassistant/sensor/toogoodtogo_{deprecated_item}/state")
@@ -851,6 +916,10 @@ def start() -> None:
 
     thread = threading.Thread(target=ua_check_loop)
     thread.start()
+
+    if settings.get("full_cleanup"):
+        thread = threading.Thread(target=cleanup_loop)
+        thread.start()
 
 
 if __name__ == "__main__":

@@ -99,6 +99,14 @@ to format pickup times like _in 2 hours_. E.g. `de` for german, `en_us` for amer
 
 remove items from Home Assistant if they are no longer in the fetched result.
 
+#### `full_cleanup` (optional)
+
+A more thorough version of `cleanup`. Instead of relying on the locally tracked store list
+(which is empty after a fresh install or a wiped data dir), it reconciles against the MQTT
+broker itself: it discovers every store entity the broker still holds and removes any that are
+no longer in your favourites. Runs once shortly after startup and then daily. Disabled by
+default — set to `true` to enable.
+
 #### `data_dir` (optional)
 
 folder to store persistent data. Needed e.g. for `cleanup` feature.
