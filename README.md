@@ -136,10 +136,24 @@ sensor:
         unit_of_measurement: "€"
         icon_template: mdi:currency-eur
         friendly_name: "Eilles Frankfurt Price"
-        value_template: "{{ state_attr('sensor.toogoodtogo_eilles_frankfurt', 'price') }}"
+        value_template: "{{ state_attr('sensor.toogoodtogo_123456', 'price') }}"
 ```
 
 ## Get a list of all toogoodtogo sensors:
+
+> [!NOTE]
+> **Entity IDs changed.** Newly discovered sensors now get a short, stable ID based on the
+> store's immutable TooGoodToGo item ID — e.g. `sensor.toogoodtogo_123456` — instead of one
+> derived from the (changeable) store name. Existing sensors keep their current IDs: Home
+> Assistant never renames an entity once created, so only stores favourited after updating use
+> the new scheme. Older installs may therefore show a mix of `sensor.toogoodtogo_…` and the
+> legacy `sensor.too_good_to_go_toogoodtogo_…` forms.
+>
+> To migrate existing sensors to the new IDs, open the **Too Good To Go** device in Home
+> Assistant, select the three-dots menu and choose **Recreate entity IDs** (see the
+> [Home Assistant docs](https://www.home-assistant.io/docs/configuration/customizing-devices/)).
+> Heads-up: this does **not** update references in your automations, scripts or dashboards — you
+> have to fix those manually.
 
 Add the following piece of code into /developer-tools/template in HomeAssistant. (Remove the last comma)
 
@@ -235,12 +249,12 @@ description: ""
 triggers:
   - trigger: time
     at:
-      entity_id: sensor.too_good_to_go_toogoodtogo_next_collection
+      entity_id: sensor.toogoodtogo_next_collection
       offset: "-00:30:00"
 
 actions:
   - variables:
-      next_collection_entity: sensor.too_good_to_go_toogoodtogo_next_collection
+      next_collection_entity: sensor.toogoodtogo_next_collection
       notification_message: |-
         🛍️ <b>Too Good To Go Pickup Reminder</b>
 
