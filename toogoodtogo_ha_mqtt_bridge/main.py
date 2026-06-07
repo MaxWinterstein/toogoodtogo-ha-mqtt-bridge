@@ -51,18 +51,22 @@ DEVICE_INFO = {
 }
 
 
-def entity_naming(object_id: str, name: str) -> dict[str, Any]:
+def entity_naming(default_entity_id: str, name: str) -> dict[str, Any]:
     """Naming keys for an MQTT discovery payload.
 
-    Pins ``object_id`` to the stable unique id so Home Assistant derives the ``entity_id``
-    from it (e.g. ``sensor.toogoodtogo_123456``) instead of from the volatile store display
-    name. ``has_entity_name`` is deliberately NOT set: with it, Home Assistant builds the
-    entity_id from the device + entity name and ignores ``object_id`` entirely.
+    Sets ``default_entity_id`` so Home Assistant derives the entity_id from the stable unique
+    id (e.g. ``sensor.toogoodtogo_123456``) instead of from the volatile store display name.
+    This is the modern replacement for the payload ``object_id`` field, which HA deprecated in
+    Core 2025.10 and removed in Core 2026.4; ``default_entity_id`` MUST include the domain
+    prefix (``sensor.`` / ``switch.``).
 
-    Note: this only affects newly discovered entities. Home Assistant freezes an existing
-    entity's ``entity_id`` at registration, so already-known sensors keep their current id.
+    Only affects newly discovered entities: with a ``unique_id`` set, HA applies
+    ``default_entity_id`` on first registration only, so existing entities keep their id.
+    HA forces ``has_entity_name=True`` on every MQTT entity, so the friendly name is always
+    prefixed with the device name ("Too Good To Go"); ``name`` is therefore the brand-free
+    sub-name (e.g. the store) to avoid duplicating the brand.
     """
-    return {"name": name, "object_id": object_id}
+    return {"name": name, "default_entity_id": default_entity_id}
 
 
 def check() -> bool:
@@ -118,7 +122,7 @@ def publish_stores_data(shops: list[Any]) -> bool:
         # Autodiscover
         config_topic = f"homeassistant/sensor/toogoodtogo_bridge/{item_id}/config"
         config_payload = {
-            **entity_naming(f"toogoodtogo_{item_id}", f"TooGoodToGo - {shop['display_name']}"),
+            **entity_naming(f"sensor.toogoodtogo_{item_id}", shop["display_name"]),
             "icon": "mdi:food" if stock > 0 else "mdi:food-off",
             "state_topic": f"homeassistant/sensor/toogoodtogo_{item_id}/state",
             "json_attributes_topic": f"homeassistant/sensor/toogoodtogo_{item_id}/attr",
@@ -203,7 +207,7 @@ def publish_orders_data(active_orders: dict) -> bool:
     result_ad = mqtt_client.publish(
         "homeassistant/sensor/toogoodtogo_next_collection/config",
         json.dumps({
-            **entity_naming("toogoodtogo_next_collection", "TooGoodToGo - Next Collection"),
+            **entity_naming("sensor.toogoodtogo_next_collection", "Next Collection"),
             "icon": "mdi:calendar-clock" if has_orders else "mdi:calendar-remove",
             "device_class": "timestamp",
             "entity_category": "diagnostic",
@@ -217,7 +221,7 @@ def publish_orders_data(active_orders: dict) -> bool:
     result_ad_count = mqtt_client.publish(
         "homeassistant/sensor/toogoodtogo_upcoming_orders/config",
         json.dumps({
-            **entity_naming("toogoodtogo_upcoming_orders", "TooGoodToGo - Upcoming Orders"),
+            **entity_naming("sensor.toogoodtogo_upcoming_orders", "Upcoming Orders"),
             "icon": "mdi:cart" if has_orders else "mdi:cart-off",
             "entity_category": "diagnostic",
             "state_topic": "homeassistant/sensor/toogoodtogo_upcoming_orders/state",
@@ -354,7 +358,7 @@ def publish_last_updated() -> bool:
     result_ad = mqtt_client.publish(
         "homeassistant/sensor/toogoodtogo_last_updated/config",
         json.dumps({
-            **entity_naming("toogoodtogo_last_updated", "TooGoodToGo - Last Updated"),
+            **entity_naming("sensor.toogoodtogo_last_updated", "Last Updated"),
             "icon": "mdi:clock-outline",
             "device_class": "timestamp",
             "entity_category": "diagnostic",
@@ -775,7 +779,7 @@ def register_fetch_sensor() -> None:
     mqtt_client.publish(
         "homeassistant/switch/toogoodtogo_bridge/intense_fetch/config",
         json.dumps({
-            **entity_naming("toogoodtogo_intense_fetch_switch", "Intense fetch"),
+            **entity_naming("switch.toogoodtogo_intense_fetch_switch", "Intense fetch"),
             "icon": "mdi:fast-forward",
             "state_topic": "homeassistant/switch/toogoodtogo_intense_fetch/state",
             "command_topic": "homeassistant/switch/toogoodtogo_intense_fetch/set",

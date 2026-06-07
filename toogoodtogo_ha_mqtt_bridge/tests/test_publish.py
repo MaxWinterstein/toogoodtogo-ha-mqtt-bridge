@@ -53,10 +53,9 @@ def test_publish_stores_data_attrs(stock: int, _settings_env: None) -> None:
     assert attrs["price"] == 4.99
     assert attrs["stock_available"] is (stock > 0)
 
-    # Stable entity-id naming: config pins object_id to the immutable item id so the
-    # entity_id derives from it (sensor.toogoodtogo_<id>) rather than the store name.
-    # has_entity_name is intentionally absent (it makes HA ignore object_id).
+    # Stable entity-id naming: default_entity_id (domain-prefixed) pins the entity_id to the
+    # immutable item id (sensor.toogoodtogo_<id>) instead of the volatile store name. name is
+    # the brand-free sub-name (HA forces has_entity_name=True, prefixing the device brand).
     config = json.loads(published["homeassistant/sensor/toogoodtogo_bridge/123/config"])
-    assert config["object_id"] == "toogoodtogo_123"
-    assert "has_entity_name" not in config
-    assert config["name"] == "TooGoodToGo - Test Store"
+    assert config["default_entity_id"] == "sensor.toogoodtogo_123"
+    assert config["name"] == "Test Store"
