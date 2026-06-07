@@ -594,7 +594,9 @@ def check_for_removed_stores(shops: list[Any]) -> None:
             logger.info(f"Shop {deprecated_item} was not checked, will send remove message")
             # NB: the discovery config lives under the .../toogoodtogo_bridge/<id>/config topic
             # (with the node id); publish an empty retained payload there to remove the entity.
-            result = mqtt_client.publish(f"homeassistant/sensor/toogoodtogo_bridge/{deprecated_item}/config", retain=True)
+            result = mqtt_client.publish(
+                f"homeassistant/sensor/toogoodtogo_bridge/{deprecated_item}/config", retain=True
+            )
             # Clear the now-retained state/attribute topics too, so a removed store leaves no
             # orphan retained message on the broker (an empty retained payload deletes it).
             publish_state(f"homeassistant/sensor/toogoodtogo_{deprecated_item}/state")
