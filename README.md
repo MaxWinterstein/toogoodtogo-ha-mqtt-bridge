@@ -111,6 +111,26 @@ default** — set to `false` to disable.
 
 folder to store persistent data. Needed e.g. for `cleanup` feature.
 
+#### Topic configuration (optional)
+
+By default all topics live under `homeassistant/` so Home Assistant auto-discovers everything.
+These optional settings let you decouple the data topics from the discovery prefix or use the
+bridge without Home Assistant at all. All default to the historical topics, so existing setups
+are unaffected.
+
+```json
+{
+  "mqtt": { "base": "homeassistant/sensor" },
+  "homeassistant": { "enabled": true, "discovery_prefix": "homeassistant" },
+  "raw": false
+}
+```
+
+- `mqtt.base` — base topic for the sensor **state/attribute** (and `raw`) data, e.g. set to `tgtg` to publish state under `tgtg/toogoodtogo_<id>/state`. Default `homeassistant/sensor`.
+- `homeassistant.enabled` — set to `false` to stop publishing Home Assistant discovery configs (and the intense-fetch switch). State/attribute/raw data is still published, for non-HA MQTT consumers. Default `true`.
+- `homeassistant.discovery_prefix` — Home Assistant's MQTT discovery prefix, if you've customised it in HA. Default `homeassistant`.
+- `raw` — also publish the full, unprocessed store payload to `<mqtt.base>/toogoodtogo_<id>/raw`. Default `false`.
+
 And start with the mounted settings file, e.g. for macOS:
 
 ```bash
