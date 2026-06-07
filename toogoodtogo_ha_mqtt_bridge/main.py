@@ -116,19 +116,19 @@ def publish_stores_data(shops: list[Any]) -> bool:
         logger.debug(f"Pushing message for {shop['display_name']} // {item_id}")
 
         # Autodiscover
-        result_ad = mqtt_client.publish(
-            f"homeassistant/sensor/toogoodtogo_bridge/{item_id}/config",
-            json.dumps({
-                **entity_naming(f"toogoodtogo_{item_id}", f"TooGoodToGo - {shop['display_name']}"),
-                "icon": "mdi:food" if stock > 0 else "mdi:food-off",
-                "state_topic": f"homeassistant/sensor/toogoodtogo_{item_id}/state",
-                "json_attributes_topic": f"homeassistant/sensor/toogoodtogo_{item_id}/attr",
-                "unit_of_measurement": "portions",
-                "value_template": "{{ value_json.stock }}",
-                "device": DEVICE_INFO,
-                "unique_id": f"toogoodtogo_{item_id}",
-            }),
-        )
+        config_topic = f"homeassistant/sensor/toogoodtogo_bridge/{item_id}/config"
+        config_payload = {
+            **entity_naming(f"toogoodtogo_{item_id}", f"TooGoodToGo - {shop['display_name']}"),
+            "icon": "mdi:food" if stock > 0 else "mdi:food-off",
+            "state_topic": f"homeassistant/sensor/toogoodtogo_{item_id}/state",
+            "json_attributes_topic": f"homeassistant/sensor/toogoodtogo_{item_id}/attr",
+            "unit_of_measurement": "portions",
+            "value_template": "{{ value_json.stock }}",
+            "device": DEVICE_INFO,
+            "unique_id": f"toogoodtogo_{item_id}",
+        }
+        logger.debug(f"Publishing discovery config to {config_topic}: {json.dumps(config_payload)}")
+        result_ad = mqtt_client.publish(config_topic, json.dumps(config_payload))
 
         result_state = mqtt_client.publish(
             f"homeassistant/sensor/toogoodtogo_{item_id}/state",
