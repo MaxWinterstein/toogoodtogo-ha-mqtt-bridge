@@ -59,17 +59,20 @@ DEVICE_INFO = {
 # setups are unaffected; read lazily so settings changes/tests take effect at call time. ---
 def data_base() -> str:
     """Base topic for the sensor state/attribute/raw data topics."""
-    return str((settings.get("mqtt") or {}).get("base", "homeassistant/sensor"))
+    value = (settings.get("mqtt") or {}).get("base")
+    return "homeassistant/sensor" if value is None else str(value)
 
 
 def discovery_prefix() -> str:
     """Home Assistant MQTT discovery prefix (where ``.../config`` topics live)."""
-    return str((settings.get("homeassistant") or {}).get("discovery_prefix", "homeassistant"))
+    value = (settings.get("homeassistant") or {}).get("discovery_prefix")
+    return "homeassistant" if value is None else str(value)
 
 
 def homeassistant_enabled() -> bool:
     """Whether to publish Home Assistant discovery configs (and the intense-fetch switch)."""
-    return bool((settings.get("homeassistant") or {}).get("enabled", True))
+    value = (settings.get("homeassistant") or {}).get("enabled")
+    return True if value is None else bool(value)
 
 
 def raw_enabled() -> bool:
@@ -233,8 +236,11 @@ def publish_stores_data(shops: list[Any]) -> bool:
 
         logger.debug(f"Pushing message for {shop['display_name']} // {item_id}")
 
+        result_raw = None
         if raw_enabled():
-            mqtt_client.publish(f"{data_base()}/toogoodtogo_{item_id}/raw", json.dumps(shop), retain=True)
+            result_raw = mqtt_client.publish(
+                f"{data_base()}/toogoodtogo_{item_id}/raw", json.dumps(shop), retain=True
+            )
 
         # Autodiscover (only when Home Assistant discovery is enabled)
         result_ad = None
@@ -297,6 +303,8 @@ def publish_stores_data(shops: list[Any]) -> bool:
         results = [result_state, result_attrs]
         if result_ad is not None:  # None when Home Assistant discovery is disabled
             results.append(result_ad)
+        if result_raw is not None:  # None when raw publishing is disabled
+            results.append(result_raw)
         logger.debug(
             f"Message published: Autodiscover: {result_ad is not None and result_ad.rc == mqtt.MQTT_ERR_SUCCESS}, "
             f"State: {bool(result_state.rc == mqtt.MQTT_ERR_SUCCESS)}, "
@@ -940,10 +948,13 @@ def start() -> None:
     mqtt_client.on_disconnect = on_disconnect
     mqtt_client.on_connect = on_connect
 
-    if homeassistant_enabled() and "intense_fetch" in settings.tgtg:
+    if "intense_fetch" in settings.tgtg:
+        # The /set topic is the command channel for both the HA switch and auto intense-fetch,
+        # so subscribe regardless of HA; only the discovery switch entity itself is HA-gated.
         mqtt_client.subscribe(f"{discovery_prefix()}/switch/toogoodtogo_intense_fetch/set")
-        register_fetch_sensor()
         mqtt_client.on_message = on_message
+        if homeassistant_enabled():
+            register_fetch_sensor()
 
     mqtt_client.loop_start()
     event = threading.Event()
