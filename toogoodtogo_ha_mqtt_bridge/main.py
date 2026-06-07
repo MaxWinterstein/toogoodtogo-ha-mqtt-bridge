@@ -4,6 +4,7 @@ import json
 import logging
 import os
 import random
+import re
 import threading
 import time
 from datetime import datetime, timedelta
@@ -41,6 +42,9 @@ tokens_rev = 2  # in case of tokens.json changes, bump this
 watchdog: Watchdog = None  # type: ignore[assignment]
 watchdog_timeout = 0
 favourite_ids: list[int] = []
+# Item ids from the last *fully successful* publish_stores_data run. The full cleanup
+# reconciles against this snapshot so it never acts on a partially-built favourites list.
+last_successful_favourite_ids: set[str] = set()
 scheduled_jobs: list[Any] = []
 
 DEVICE_INFO = {
@@ -78,6 +82,70 @@ def publish_state(topic: str, payload: str | None = None) -> Any:
     subscribed to its topic (issue #85).
     """
     return mqtt_client.publish(topic, payload, retain=True)
+
+
+CLEANUP_SCAN_SECONDS = 5  # how long to collect retained messages from the broker
+
+
+def full_cleanup(current_item_ids: set[str]) -> None:
+    """Remove Home Assistant entities for stores that are no longer favourites.
+
+    Unlike :func:`check_for_removed_stores` (which only knows stores recorded in
+    ``known_shops.json``), this reconciles against the MQTT broker itself: it discovers every
+    store entity the broker still holds via their retained state topics and clears
+    (config + state + attr) any whose item id is not in ``current_item_ids``. This makes
+    cleanup robust to a fresh add-on install or a wiped data dir, where ``known_shops.json`` is
+    gone. On by default; set ``full_cleanup: false`` to disable.
+    """
+    if not current_item_ids:
+        # Never reconcile against an empty list - that would delete every entity.
+        logger.warning("Full cleanup skipped: no current favourites to reconcile against")
+        return
+
+    seen: set[str] = set()
+    store_state_topic = re.compile(r"^homeassistant/sensor/toogoodtogo_(\d+)/state$")
+
+    def on_scan_message(client: Any, userdata: Any, message: Any) -> None:
+        # A numeric id means a store sensor; this structurally excludes the fixed diagnostic
+        # sensors (next_collection / upcoming_orders / last_updated) and the switch.
+        match = store_state_topic.match(message.topic)
+        if match and message.payload:  # retained and non-empty => a live store entity
+            seen.add(match.group(1))
+
+    scanner = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id="toogoodtogo-cleanup-scan")
+    if settings.mqtt.username:
+        scanner.username_pw_set(username=settings.mqtt.username, password=settings.mqtt.password)
+    scanner.on_message = on_scan_message
+    scanner.connect(host=settings.mqtt.host, port=int(settings.mqtt.port))
+    scanner.loop_start()
+    scanner.subscribe("homeassistant/sensor/+/state")  # retained messages are replayed on subscribe
+    sleep(CLEANUP_SCAN_SECONDS)
+    scanner.loop_stop()
+    scanner.disconnect()
+
+    orphans = seen - current_item_ids
+    for item_id in orphans:
+        logger.info(f"Full cleanup: removing orphaned store {item_id}")
+        # An empty retained payload deletes the retained message and removes the HA entity.
+        mqtt_client.publish(f"homeassistant/sensor/toogoodtogo_bridge/{item_id}/config", retain=True)
+        mqtt_client.publish(f"homeassistant/sensor/toogoodtogo_{item_id}/state", retain=True)
+        mqtt_client.publish(f"homeassistant/sensor/toogoodtogo_{item_id}/attr", retain=True)
+    logger.info(f"Full cleanup finished: removed {len(orphans)} orphan(s), kept {len(seen & current_item_ids)}")
+
+
+def cleanup_loop() -> None:
+    """Run :func:`full_cleanup` once the first fetch has succeeded, then daily."""
+    while not last_successful_favourite_ids:  # wait for a trusted favourites snapshot
+        sleep(30)
+    while True:
+        try:
+            full_cleanup(set(last_successful_favourite_ids))
+        except Exception:
+            # A transient broker error must not permanently stop the daily cleanup.
+            logger.exception("Full cleanup run failed; will retry on the next schedule")
+        now = datetime.now()
+        next_run = croniter("0 4 * * *", now).get_next(datetime)
+        sleep((next_run - now).seconds)
 
 
 def check() -> bool:
@@ -120,7 +188,7 @@ def check() -> bool:
 
 
 def publish_stores_data(shops: list[Any]) -> bool:
-    global favourite_ids
+    global favourite_ids, last_successful_favourite_ids
     favourite_ids.clear()
 
     for shop in shops:
@@ -208,6 +276,8 @@ def publish_stores_data(shops: list[Any]) -> bool:
             logger.warning("Seems like some message was not transferred successfully.")
             return False
 
+    # Only now, after a fully successful run, record the trusted snapshot for the full cleanup.
+    last_successful_favourite_ids = {str(item_id) for item_id in favourite_ids}
     return True
 
 
@@ -529,7 +599,11 @@ def check_for_removed_stores(shops: list[Any]) -> None:
         deprecated_items = [x for x in known_items if x not in checked_items]
         for deprecated_item in deprecated_items:
             logger.info(f"Shop {deprecated_item} was not checked, will send remove message")
-            result = mqtt_client.publish(f"homeassistant/sensor/toogoodtogo_{deprecated_item}/config")
+            # NB: the discovery config lives under the .../toogoodtogo_bridge/<id>/config topic
+            # (with the node id); publish an empty retained payload there to remove the entity.
+            result = mqtt_client.publish(
+                f"homeassistant/sensor/toogoodtogo_bridge/{deprecated_item}/config", retain=True
+            )
             # Clear the now-retained state/attribute topics too, so a removed store leaves no
             # orphan retained message on the broker (an empty retained payload deletes it).
             publish_state(f"homeassistant/sensor/toogoodtogo_{deprecated_item}/state")
@@ -851,6 +925,10 @@ def start() -> None:
 
     thread = threading.Thread(target=ua_check_loop)
     thread.start()
+
+    if settings.get("full_cleanup", True):  # on by default; set full_cleanup: false to disable
+        thread = threading.Thread(target=cleanup_loop)
+        thread.start()
 
 
 if __name__ == "__main__":
