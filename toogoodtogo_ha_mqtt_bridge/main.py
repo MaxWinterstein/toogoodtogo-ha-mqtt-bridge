@@ -238,9 +238,7 @@ def publish_stores_data(shops: list[Any]) -> bool:
 
         result_raw = None
         if raw_enabled():
-            result_raw = mqtt_client.publish(
-                f"{data_base()}/toogoodtogo_{item_id}/raw", json.dumps(shop), retain=True
-            )
+            result_raw = mqtt_client.publish(f"{data_base()}/toogoodtogo_{item_id}/raw", json.dumps(shop), retain=True)
 
         # Autodiscover (only when Home Assistant discovery is enabled)
         result_ad = None
