@@ -148,6 +148,12 @@ sensor:
 > Assistant never renames an entity once created, so only stores favourited after updating use
 > the new scheme. Older installs may therefore show a mix of `sensor.toogoodtogo_…` and the
 > legacy `sensor.too_good_to_go_toogoodtogo_…` forms.
+>
+> To migrate existing sensors to the new IDs, open the **Too Good To Go** device in Home
+> Assistant, select the three-dots menu and choose **Recreate entity IDs** (see the
+> [Home Assistant docs](https://www.home-assistant.io/docs/configuration/customizing-devices/)).
+> Heads-up: this does **not** update references in your automations, scripts or dashboards — you
+> have to fix those manually.
 
 Add the following piece of code into /developer-tools/template in HomeAssistant. (Remove the last comma)
 
