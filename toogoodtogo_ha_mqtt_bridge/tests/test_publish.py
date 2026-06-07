@@ -1,5 +1,6 @@
 import json
 from collections.abc import Generator
+from pathlib import Path
 from unittest.mock import MagicMock
 
 import paho.mqtt.client as mqtt
@@ -35,9 +36,11 @@ def _settings_env() -> Generator[None, None, None]:
 @pytest.mark.parametrize("stock", [3, 0])
 def test_publish_stores_data_attrs(stock: int, _settings_env: None) -> None:
     published: dict[str, str] = {}
+    retained: dict[str, bool] = {}
 
-    def fake_publish(topic: str, payload: str | None = None) -> MagicMock:
+    def fake_publish(topic: str, payload: str | None = None, retain: bool = False) -> MagicMock:
         published[topic] = payload  # type: ignore[assignment]
+        retained[topic] = retain
         return MagicMock(rc=mqtt.MQTT_ERR_SUCCESS)
 
     main.mqtt_client = MagicMock()
@@ -53,12 +56,19 @@ def test_publish_stores_data_attrs(stock: int, _settings_env: None) -> None:
     assert attrs["price"] == 4.99
     assert attrs["stock_available"] is (stock > 0)
 
+    # State/attribute messages must be retained so a freshly discovered entity shows its
+    # value immediately on subscribe instead of 'unknown' until the next poll (issue #85).
+    assert retained["homeassistant/sensor/toogoodtogo_123/state"] is True
+    assert retained["homeassistant/sensor/toogoodtogo_123/attr"] is True
+
     # Stable entity-id naming: default_entity_id (domain-prefixed) pins the entity_id to the
     # immutable item id (sensor.toogoodtogo_<id>) instead of the volatile store name. name is
     # the brand-free sub-name (HA forces has_entity_name=True, prefixing the device brand).
     config = json.loads(published["homeassistant/sensor/toogoodtogo_bridge/123/config"])
     assert config["default_entity_id"] == "sensor.toogoodtogo_123"
     assert config["name"] == "Test Store"
+    # Discovery config is intentionally NOT retained (only state/attrs are).
+    assert retained["homeassistant/sensor/toogoodtogo_bridge/123/config"] is False
 
 
 def test_register_fetch_sensor_naming() -> None:
@@ -78,3 +88,30 @@ def test_register_fetch_sensor_naming() -> None:
     config = json.loads(published["homeassistant/switch/toogoodtogo_bridge/intense_fetch/config"])
     assert config["default_entity_id"] == "switch.toogoodtogo_intense_fetch_switch"
     assert config["name"] == "Intense fetch"
+
+
+def test_check_for_removed_stores_clears_retained(tmp_path: Path) -> None:
+    # A removed store must clear its retained state/attr topics (empty retained payload),
+    # otherwise the retained messages orphan on the broker forever.
+    original_data_dir = settings.get("data_dir")
+    settings["data_dir"] = str(tmp_path)
+    (tmp_path / "known_shops.json").write_text(json.dumps(["999"]))
+    try:
+        published: dict[str, str | None] = {}
+        retained: dict[str, bool] = {}
+
+        def fake_publish(topic: str, payload: str | None = None, retain: bool = False) -> MagicMock:
+            published[topic] = payload
+            retained[topic] = retain
+            return MagicMock(rc=mqtt.MQTT_ERR_SUCCESS)
+
+        main.mqtt_client = MagicMock()
+        main.mqtt_client.publish.side_effect = fake_publish
+
+        main.check_for_removed_stores([])  # no current shops -> "999" is deprecated
+
+        for topic in ("homeassistant/sensor/toogoodtogo_999/state", "homeassistant/sensor/toogoodtogo_999/attr"):
+            assert retained[topic] is True
+            assert published[topic] is None  # empty payload clears the retained message
+    finally:
+        settings["data_dir"] = original_data_dir

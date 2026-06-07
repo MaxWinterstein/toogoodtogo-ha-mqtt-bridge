@@ -69,6 +69,17 @@ def entity_naming(default_entity_id: str, name: str) -> dict[str, Any]:
     return {"name": name, "default_entity_id": default_entity_id}
 
 
+def publish_state(topic: str, payload: str | None = None) -> Any:
+    """Publish a retained state/attribute message.
+
+    State and attribute messages are retained so Home Assistant receives the current value
+    the instant it subscribes. Without retain a freshly discovered entity shows ``unknown``
+    until the next poll, because the value is published before HA has created the entity and
+    subscribed to its topic (issue #85).
+    """
+    return mqtt_client.publish(topic, payload, retain=True)
+
+
 def check() -> bool:
     global first_run
 
@@ -134,7 +145,7 @@ def publish_stores_data(shops: list[Any]) -> bool:
             }),
         )
 
-        result_state = mqtt_client.publish(
+        result_state = publish_state(
             f"homeassistant/sensor/toogoodtogo_{item_id}/state",
             json.dumps({"stock": stock}),
         )
@@ -175,7 +186,7 @@ def publish_stores_data(shops: list[Any]) -> bool:
                 # okay, i give up. Take TGTG brand logo.
                 picture = "https://toogoodtogo.com/images/logo/econ-textless.svg"
 
-        result_attrs = mqtt_client.publish(
+        result_attrs = publish_state(
             f"homeassistant/sensor/toogoodtogo_{item_id}/attr",
             json.dumps({
                 "price": price,
@@ -239,12 +250,12 @@ def publish_orders_data(active_orders: dict) -> bool:
         pickup_date = next_order["pickup_interval"]["start"]
         pickup_date_arrow = arrow.get(pickup_date).to(tz=settings.timezone)
 
-        result_state = mqtt_client.publish(
+        result_state = publish_state(
             "homeassistant/sensor/toogoodtogo_next_collection/state",
             pickup_date_arrow.isoformat(),
         )
 
-        result_attrs = mqtt_client.publish(
+        result_attrs = publish_state(
             "homeassistant/sensor/toogoodtogo_next_collection/attr",
             json.dumps({
                 "order_id": next_order["order_id"],
@@ -263,7 +274,7 @@ def publish_orders_data(active_orders: dict) -> bool:
             }),
         )
 
-        result_state_count = mqtt_client.publish(
+        result_state_count = publish_state(
             "homeassistant/sensor/toogoodtogo_upcoming_orders/state",
             str(len(orders)),
         )
@@ -280,7 +291,7 @@ def publish_orders_data(active_orders: dict) -> bool:
             for order in orders
         ]
 
-        result_attrs_count = mqtt_client.publish(
+        result_attrs_count = publish_state(
             "homeassistant/sensor/toogoodtogo_upcoming_orders/attr",
             json.dumps({"orders": orders_summary}),
         )
@@ -309,19 +320,19 @@ def publish_orders_data(active_orders: dict) -> bool:
             return False
 
     else:
-        result_state = mqtt_client.publish(
+        result_state = publish_state(
             "homeassistant/sensor/toogoodtogo_next_collection/state",
             "null",
         )
-        result_attrs = mqtt_client.publish(
+        result_attrs = publish_state(
             "homeassistant/sensor/toogoodtogo_next_collection/attr",
             json.dumps({}),
         )
-        result_state_count = mqtt_client.publish(
+        result_state_count = publish_state(
             "homeassistant/sensor/toogoodtogo_upcoming_orders/state",
             "0",
         )
-        result_attrs_count = mqtt_client.publish(
+        result_attrs_count = publish_state(
             "homeassistant/sensor/toogoodtogo_upcoming_orders/attr",
             json.dumps({"orders": []}),
         )
@@ -368,7 +379,7 @@ def publish_last_updated() -> bool:
         }),
     )
 
-    result_state = mqtt_client.publish(
+    result_state = publish_state(
         "homeassistant/sensor/toogoodtogo_last_updated/state",
         current_time.isoformat(),
     )
@@ -519,6 +530,10 @@ def check_for_removed_stores(shops: list[Any]) -> None:
         for deprecated_item in deprecated_items:
             logger.info(f"Shop {deprecated_item} was not checked, will send remove message")
             result = mqtt_client.publish(f"homeassistant/sensor/toogoodtogo_{deprecated_item}/config")
+            # Clear the now-retained state/attribute topics too, so a removed store leaves no
+            # orphan retained message on the broker (an empty retained payload deletes it).
+            publish_state(f"homeassistant/sensor/toogoodtogo_{deprecated_item}/state")
+            publish_state(f"homeassistant/sensor/toogoodtogo_{deprecated_item}/attr")
             logger.debug(f"Message published: Removal: {bool(result.rc == mqtt.MQTT_ERR_SUCCESS)}")
 
     with open(path, "w") as f:
