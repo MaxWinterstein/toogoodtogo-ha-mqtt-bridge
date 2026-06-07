@@ -95,7 +95,7 @@ def full_cleanup(current_item_ids: set[str]) -> None:
     store entity the broker still holds via their retained state topics and clears
     (config + state + attr) any whose item id is not in ``current_item_ids``. This makes
     cleanup robust to a fresh add-on install or a wiped data dir, where ``known_shops.json`` is
-    gone. Opt-in via the ``full_cleanup`` setting.
+    gone. On by default; set ``full_cleanup: false`` to disable.
     """
     if not current_item_ids:
         # Never reconcile against an empty list - that would delete every entity.
@@ -926,7 +926,7 @@ def start() -> None:
     thread = threading.Thread(target=ua_check_loop)
     thread.start()
 
-    if settings.get("full_cleanup"):
+    if settings.get("full_cleanup", True):  # on by default; set full_cleanup: false to disable
         thread = threading.Thread(target=cleanup_loop)
         thread.start()
 

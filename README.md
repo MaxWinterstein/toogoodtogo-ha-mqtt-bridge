@@ -104,8 +104,8 @@ remove items from Home Assistant if they are no longer in the fetched result.
 A more thorough version of `cleanup`. Instead of relying on the locally tracked store list
 (which is empty after a fresh install or a wiped data dir), it reconciles against the MQTT
 broker itself: it discovers every store entity the broker still holds and removes any that are
-no longer in your favourites. Runs once shortly after startup and then daily. Disabled by
-default — set to `true` to enable.
+no longer in your favourites. Runs once shortly after startup and then daily. **Enabled by
+default** — set to `false` to disable.
 
 #### `data_dir` (optional)
 
