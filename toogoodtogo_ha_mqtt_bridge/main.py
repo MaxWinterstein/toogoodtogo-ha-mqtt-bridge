@@ -530,6 +530,10 @@ def check_for_removed_stores(shops: list[Any]) -> None:
         for deprecated_item in deprecated_items:
             logger.info(f"Shop {deprecated_item} was not checked, will send remove message")
             result = mqtt_client.publish(f"homeassistant/sensor/toogoodtogo_{deprecated_item}/config")
+            # Clear the now-retained state/attribute topics too, so a removed store leaves no
+            # orphan retained message on the broker (an empty retained payload deletes it).
+            publish_state(f"homeassistant/sensor/toogoodtogo_{deprecated_item}/state")
+            publish_state(f"homeassistant/sensor/toogoodtogo_{deprecated_item}/attr")
             logger.debug(f"Message published: Removal: {bool(result.rc == mqtt.MQTT_ERR_SUCCESS)}")
 
     with open(path, "w") as f:
