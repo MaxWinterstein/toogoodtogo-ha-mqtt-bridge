@@ -55,6 +55,31 @@ DEVICE_INFO = {
 }
 
 
+# --- Configurable MQTT topics (see #131). All default to the historical topics, so existing
+# setups are unaffected; read lazily so settings changes/tests take effect at call time. ---
+def data_base() -> str:
+    """Base topic for the sensor state/attribute/raw data topics."""
+    value = (settings.get("mqtt") or {}).get("base")
+    return "homeassistant/sensor" if value is None else str(value)
+
+
+def discovery_prefix() -> str:
+    """Home Assistant MQTT discovery prefix (where ``.../config`` topics live)."""
+    value = (settings.get("homeassistant") or {}).get("discovery_prefix")
+    return "homeassistant" if value is None else str(value)
+
+
+def homeassistant_enabled() -> bool:
+    """Whether to publish Home Assistant discovery configs (and the intense-fetch switch)."""
+    value = (settings.get("homeassistant") or {}).get("enabled")
+    return True if value is None else bool(value)
+
+
+def raw_enabled() -> bool:
+    """Whether to also publish the full raw store payload (for non-HA MQTT consumers)."""
+    return bool(settings.get("raw", False))
+
+
 def entity_naming(default_entity_id: str, name: str) -> dict[str, Any]:
     """Naming keys for an MQTT discovery payload.
 
@@ -103,7 +128,7 @@ def full_cleanup(current_item_ids: set[str]) -> None:
         return
 
     seen: set[str] = set()
-    store_state_topic = re.compile(r"^homeassistant/sensor/toogoodtogo_(\d+)/state$")
+    store_state_topic = re.compile(rf"^{re.escape(data_base())}/toogoodtogo_(\d+)/state$")
 
     def on_scan_message(client: Any, userdata: Any, message: Any) -> None:
         # A numeric id means a store sensor; this structurally excludes the fixed diagnostic
@@ -118,7 +143,7 @@ def full_cleanup(current_item_ids: set[str]) -> None:
     scanner.on_message = on_scan_message
     scanner.connect(host=settings.mqtt.host, port=int(settings.mqtt.port))
     scanner.loop_start()
-    scanner.subscribe("homeassistant/sensor/+/state")  # retained messages are replayed on subscribe
+    scanner.subscribe(f"{data_base()}/+/state")  # retained messages are replayed on subscribe
     sleep(CLEANUP_SCAN_SECONDS)
     scanner.loop_stop()
     scanner.disconnect()
@@ -127,9 +152,9 @@ def full_cleanup(current_item_ids: set[str]) -> None:
     for item_id in orphans:
         logger.info(f"Full cleanup: removing orphaned store {item_id}")
         # An empty retained payload deletes the retained message and removes the HA entity.
-        mqtt_client.publish(f"homeassistant/sensor/toogoodtogo_bridge/{item_id}/config", retain=True)
-        mqtt_client.publish(f"homeassistant/sensor/toogoodtogo_{item_id}/state", retain=True)
-        mqtt_client.publish(f"homeassistant/sensor/toogoodtogo_{item_id}/attr", retain=True)
+        mqtt_client.publish(f"{discovery_prefix()}/sensor/toogoodtogo_bridge/{item_id}/config", retain=True)
+        mqtt_client.publish(f"{data_base()}/toogoodtogo_{item_id}/state", retain=True)
+        mqtt_client.publish(f"{data_base()}/toogoodtogo_{item_id}/attr", retain=True)
     logger.info(f"Full cleanup finished: removed {len(orphans)} orphan(s), kept {len(seen & current_item_ids)}")
 
 
@@ -166,16 +191,18 @@ def check() -> bool:
     if settings.get("cleanup"):
         check_for_removed_stores(shops)
 
-    try:
-        active_orders = tgtg_client.get_active()
-        if not publish_orders_data(active_orders):
+    # Orders / last-updated are Home Assistant diagnostic sensors; skip them when HA is disabled.
+    if homeassistant_enabled():
+        try:
+            active_orders = tgtg_client.get_active()
+            if not publish_orders_data(active_orders):
+                return False
+        except Exception:
+            logging.exception("Error fetching active orders")
             return False
-    except Exception:
-        logging.exception("Error fetching active orders")
-        return False
 
-    if not publish_last_updated():
-        return False
+        if not publish_last_updated():
+            return False
 
     # Start automatic intense fetch watchdog
     if first_run and settings.get("enable_auto_intense_fetch"):
@@ -185,6 +212,17 @@ def check() -> bool:
     first_run = False
 
     return True
+
+
+def extract_price(item: dict[str, Any]) -> float:
+    """Return the item price in major units, trying the known price fields in order."""
+    for key in ("price", "item_price", "price_including_taxes"):
+        if item.get(key):
+            return float(item[key]["minor_units"] / pow(10, item[key]["decimals"]))
+    logger.error("Can't find price")
+    logger.debug("Content of item obj:")
+    logger.debug(json.dumps(item))
+    return 0
 
 
 def publish_stores_data(shops: list[Any]) -> bool:
@@ -198,40 +236,33 @@ def publish_stores_data(shops: list[Any]) -> bool:
 
         logger.debug(f"Pushing message for {shop['display_name']} // {item_id}")
 
-        # Autodiscover
-        result_ad = mqtt_client.publish(
-            f"homeassistant/sensor/toogoodtogo_bridge/{item_id}/config",
-            json.dumps({
-                **entity_naming(f"sensor.toogoodtogo_{item_id}", shop["display_name"]),
-                "icon": "mdi:food" if stock > 0 else "mdi:food-off",
-                "state_topic": f"homeassistant/sensor/toogoodtogo_{item_id}/state",
-                "json_attributes_topic": f"homeassistant/sensor/toogoodtogo_{item_id}/attr",
-                "unit_of_measurement": "portions",
-                "value_template": "{{ value_json.stock }}",
-                "device": DEVICE_INFO,
-                "unique_id": f"toogoodtogo_{item_id}",
-            }),
-        )
+        result_raw = None
+        if raw_enabled():
+            result_raw = mqtt_client.publish(f"{data_base()}/toogoodtogo_{item_id}/raw", json.dumps(shop), retain=True)
+
+        # Autodiscover (only when Home Assistant discovery is enabled)
+        result_ad = None
+        if homeassistant_enabled():
+            result_ad = mqtt_client.publish(
+                f"{discovery_prefix()}/sensor/toogoodtogo_bridge/{item_id}/config",
+                json.dumps({
+                    **entity_naming(f"sensor.toogoodtogo_{item_id}", shop["display_name"]),
+                    "icon": "mdi:food" if stock > 0 else "mdi:food-off",
+                    "state_topic": f"{data_base()}/toogoodtogo_{item_id}/state",
+                    "json_attributes_topic": f"{data_base()}/toogoodtogo_{item_id}/attr",
+                    "unit_of_measurement": "portions",
+                    "value_template": "{{ value_json.stock }}",
+                    "device": DEVICE_INFO,
+                    "unique_id": f"toogoodtogo_{item_id}",
+                }),
+            )
 
         result_state = publish_state(
-            f"homeassistant/sensor/toogoodtogo_{item_id}/state",
+            f"{data_base()}/toogoodtogo_{item_id}/state",
             json.dumps({"stock": stock}),
         )
 
-        # prepare attrs
-        if shop["item"].get("price"):
-            price = shop["item"]["price"]["minor_units"] / pow(10, shop["item"]["price"]["decimals"])
-        elif shop["item"].get("item_price"):
-            price = shop["item"]["item_price"]["minor_units"] / pow(10, shop["item"]["item_price"]["decimals"])
-        elif shop["item"].get("price_including_taxes"):
-            price = shop["item"]["price_including_taxes"]["minor_units"] / pow(
-                10, shop["item"]["price_including_taxes"]["decimals"]
-            )
-        else:
-            logger.error("Can't find price")
-            logger.debug("Content of item obj:")
-            logger.debug(json.dumps(shop["item"]))
-            price = 0
+        price = extract_price(shop["item"])
 
         pickup_start_date = None if not stock else arrow.get(shop["pickup_interval"]["start"]).to(tz=settings.timezone)
         pickup_end_date = None if not stock else arrow.get(shop["pickup_interval"]["end"]).to(tz=settings.timezone)
@@ -255,7 +286,7 @@ def publish_stores_data(shops: list[Any]) -> bool:
                 picture = "https://toogoodtogo.com/images/logo/econ-textless.svg"
 
         result_attrs = publish_state(
-            f"homeassistant/sensor/toogoodtogo_{item_id}/attr",
+            f"{data_base()}/toogoodtogo_{item_id}/attr",
             json.dumps({
                 "price": price,
                 "stock_available": True if stock > 0 else False,
@@ -267,12 +298,17 @@ def publish_stores_data(shops: list[Any]) -> bool:
                 "picture": picture,
             }),
         )
+        results = [result_state, result_attrs]
+        if result_ad is not None:  # None when Home Assistant discovery is disabled
+            results.append(result_ad)
+        if result_raw is not None:  # None when raw publishing is disabled
+            results.append(result_raw)
         logger.debug(
-            f"Message published: Autodiscover: {bool(result_ad.rc == mqtt.MQTT_ERR_SUCCESS)}, "
+            f"Message published: Autodiscover: {result_ad is not None and result_ad.rc == mqtt.MQTT_ERR_SUCCESS}, "
             f"State: {bool(result_state.rc == mqtt.MQTT_ERR_SUCCESS)}, "
             f"Attributes: {bool(result_attrs.rc == mqtt.MQTT_ERR_SUCCESS)}"
         )
-        if not result_ad.rc == result_state.rc == result_attrs.rc == mqtt.MQTT_ERR_SUCCESS:
+        if not all(result.rc == mqtt.MQTT_ERR_SUCCESS for result in results):
             logger.warning("Seems like some message was not transferred successfully.")
             return False
 
@@ -286,27 +322,27 @@ def publish_orders_data(active_orders: dict) -> bool:
     has_orders = len(orders) > 0
 
     result_ad = mqtt_client.publish(
-        "homeassistant/sensor/toogoodtogo_next_collection/config",
+        f"{discovery_prefix()}/sensor/toogoodtogo_next_collection/config",
         json.dumps({
             **entity_naming("sensor.toogoodtogo_next_collection", "Next Collection"),
             "icon": "mdi:calendar-clock" if has_orders else "mdi:calendar-remove",
             "device_class": "timestamp",
             "entity_category": "diagnostic",
-            "state_topic": "homeassistant/sensor/toogoodtogo_next_collection/state",
-            "json_attributes_topic": "homeassistant/sensor/toogoodtogo_next_collection/attr",
+            "state_topic": f"{data_base()}/toogoodtogo_next_collection/state",
+            "json_attributes_topic": f"{data_base()}/toogoodtogo_next_collection/attr",
             "device": DEVICE_INFO,
             "unique_id": "toogoodtogo_next_collection",
         }),
     )
 
     result_ad_count = mqtt_client.publish(
-        "homeassistant/sensor/toogoodtogo_upcoming_orders/config",
+        f"{discovery_prefix()}/sensor/toogoodtogo_upcoming_orders/config",
         json.dumps({
             **entity_naming("sensor.toogoodtogo_upcoming_orders", "Upcoming Orders"),
             "icon": "mdi:cart" if has_orders else "mdi:cart-off",
             "entity_category": "diagnostic",
-            "state_topic": "homeassistant/sensor/toogoodtogo_upcoming_orders/state",
-            "json_attributes_topic": "homeassistant/sensor/toogoodtogo_upcoming_orders/attr",
+            "state_topic": f"{data_base()}/toogoodtogo_upcoming_orders/state",
+            "json_attributes_topic": f"{data_base()}/toogoodtogo_upcoming_orders/attr",
             "unit_of_measurement": "orders",
             "device": DEVICE_INFO,
             "unique_id": "toogoodtogo_upcoming_orders",
@@ -321,12 +357,12 @@ def publish_orders_data(active_orders: dict) -> bool:
         pickup_date_arrow = arrow.get(pickup_date).to(tz=settings.timezone)
 
         result_state = publish_state(
-            "homeassistant/sensor/toogoodtogo_next_collection/state",
+            f"{data_base()}/toogoodtogo_next_collection/state",
             pickup_date_arrow.isoformat(),
         )
 
         result_attrs = publish_state(
-            "homeassistant/sensor/toogoodtogo_next_collection/attr",
+            f"{data_base()}/toogoodtogo_next_collection/attr",
             json.dumps({
                 "order_id": next_order["order_id"],
                 "store_name": next_order["store_name"],
@@ -345,7 +381,7 @@ def publish_orders_data(active_orders: dict) -> bool:
         )
 
         result_state_count = publish_state(
-            "homeassistant/sensor/toogoodtogo_upcoming_orders/state",
+            f"{data_base()}/toogoodtogo_upcoming_orders/state",
             str(len(orders)),
         )
 
@@ -362,7 +398,7 @@ def publish_orders_data(active_orders: dict) -> bool:
         ]
 
         result_attrs_count = publish_state(
-            "homeassistant/sensor/toogoodtogo_upcoming_orders/attr",
+            f"{data_base()}/toogoodtogo_upcoming_orders/attr",
             json.dumps({"orders": orders_summary}),
         )
 
@@ -391,19 +427,19 @@ def publish_orders_data(active_orders: dict) -> bool:
 
     else:
         result_state = publish_state(
-            "homeassistant/sensor/toogoodtogo_next_collection/state",
+            f"{data_base()}/toogoodtogo_next_collection/state",
             "null",
         )
         result_attrs = publish_state(
-            "homeassistant/sensor/toogoodtogo_next_collection/attr",
+            f"{data_base()}/toogoodtogo_next_collection/attr",
             json.dumps({}),
         )
         result_state_count = publish_state(
-            "homeassistant/sensor/toogoodtogo_upcoming_orders/state",
+            f"{data_base()}/toogoodtogo_upcoming_orders/state",
             "0",
         )
         result_attrs_count = publish_state(
-            "homeassistant/sensor/toogoodtogo_upcoming_orders/attr",
+            f"{data_base()}/toogoodtogo_upcoming_orders/attr",
             json.dumps({"orders": []}),
         )
 
@@ -437,20 +473,20 @@ def publish_last_updated() -> bool:
     current_time = arrow.now().to(tz=settings.timezone)
 
     result_ad = mqtt_client.publish(
-        "homeassistant/sensor/toogoodtogo_last_updated/config",
+        f"{discovery_prefix()}/sensor/toogoodtogo_last_updated/config",
         json.dumps({
             **entity_naming("sensor.toogoodtogo_last_updated", "Last Updated"),
             "icon": "mdi:clock-outline",
             "device_class": "timestamp",
             "entity_category": "diagnostic",
-            "state_topic": "homeassistant/sensor/toogoodtogo_last_updated/state",
+            "state_topic": f"{data_base()}/toogoodtogo_last_updated/state",
             "device": DEVICE_INFO,
             "unique_id": "toogoodtogo_last_updated",
         }),
     )
 
     result_state = publish_state(
-        "homeassistant/sensor/toogoodtogo_last_updated/state",
+        f"{data_base()}/toogoodtogo_last_updated/state",
         current_time.isoformat(),
     )
 
@@ -602,12 +638,12 @@ def check_for_removed_stores(shops: list[Any]) -> None:
             # NB: the discovery config lives under the .../toogoodtogo_bridge/<id>/config topic
             # (with the node id); publish an empty retained payload there to remove the entity.
             result = mqtt_client.publish(
-                f"homeassistant/sensor/toogoodtogo_bridge/{deprecated_item}/config", retain=True
+                f"{discovery_prefix()}/sensor/toogoodtogo_bridge/{deprecated_item}/config", retain=True
             )
             # Clear the now-retained state/attribute topics too, so a removed store leaves no
             # orphan retained message on the broker (an empty retained payload deletes it).
-            publish_state(f"homeassistant/sensor/toogoodtogo_{deprecated_item}/state")
-            publish_state(f"homeassistant/sensor/toogoodtogo_{deprecated_item}/attr")
+            publish_state(f"{data_base()}/toogoodtogo_{deprecated_item}/state")
+            publish_state(f"{data_base()}/toogoodtogo_{deprecated_item}/attr")
             logger.debug(f"Message published: Removal: {bool(result.rc == mqtt.MQTT_ERR_SUCCESS)}")
 
     with open(path, "w") as f:
@@ -682,7 +718,7 @@ def next_sales_loop() -> None:
 def trigger_intense_fetch() -> Any:
     logger.info("Running automatic intense fetch!")
     mqtt_client.publish(
-        "homeassistant/switch/toogoodtogo_intense_fetch/set",
+        f"{discovery_prefix()}/switch/toogoodtogo_intense_fetch/set",
         "ON",
     )
     return schedule.CancelJob
@@ -815,7 +851,7 @@ def intense_fetch() -> None:
         return
 
     mqtt_client.publish(
-        "homeassistant/switch/toogoodtogo_intense_fetch/state",
+        f"{discovery_prefix()}/switch/toogoodtogo_intense_fetch/state",
         "ON",
     )
 
@@ -834,7 +870,7 @@ def intense_fetch() -> None:
     intense_fetch_thread = None
 
     mqtt_client.publish(
-        "homeassistant/switch/toogoodtogo_intense_fetch/state",
+        f"{discovery_prefix()}/switch/toogoodtogo_intense_fetch/state",
         "OFF",
     )
 
@@ -857,7 +893,7 @@ def on_message(client: Any, userdata: Any, message: Any) -> None:
                 intense_fetch_thread.do_run = False  # type: ignore[attr-defined]
                 logger.info("Intense fetch is stopped in the next cycle.")
                 mqtt_client.publish(
-                    "homeassistant/switch/toogoodtogo_intense_fetch/state",
+                    f"{discovery_prefix()}/switch/toogoodtogo_intense_fetch/state",
                     "OFF",
                 )
             else:
@@ -866,19 +902,19 @@ def on_message(client: Any, userdata: Any, message: Any) -> None:
 
 def register_fetch_sensor() -> None:
     mqtt_client.publish(
-        "homeassistant/switch/toogoodtogo_bridge/intense_fetch/config",
+        f"{discovery_prefix()}/switch/toogoodtogo_bridge/intense_fetch/config",
         json.dumps({
             **entity_naming("switch.toogoodtogo_intense_fetch_switch", "Intense fetch"),
             "icon": "mdi:fast-forward",
-            "state_topic": "homeassistant/switch/toogoodtogo_intense_fetch/state",
-            "command_topic": "homeassistant/switch/toogoodtogo_intense_fetch/set",
+            "state_topic": f"{discovery_prefix()}/switch/toogoodtogo_intense_fetch/state",
+            "command_topic": f"{discovery_prefix()}/switch/toogoodtogo_intense_fetch/set",
             "device": DEVICE_INFO,
             "unique_id": "toogoodtogo_intense_fetch_switch",
         }),
     )
 
     mqtt_client.publish(
-        "homeassistant/switch/toogoodtogo_intense_fetch/state",
+        f"{discovery_prefix()}/switch/toogoodtogo_intense_fetch/state",
         "OFF",
     )
 
@@ -911,9 +947,12 @@ def start() -> None:
     mqtt_client.on_connect = on_connect
 
     if "intense_fetch" in settings.tgtg:
-        mqtt_client.subscribe("homeassistant/switch/toogoodtogo_intense_fetch/set")
-        register_fetch_sensor()
+        # The /set topic is the command channel for both the HA switch and auto intense-fetch,
+        # so subscribe regardless of HA; only the discovery switch entity itself is HA-gated.
+        mqtt_client.subscribe(f"{discovery_prefix()}/switch/toogoodtogo_intense_fetch/set")
         mqtt_client.on_message = on_message
+        if homeassistant_enabled():
+            register_fetch_sensor()
 
     mqtt_client.loop_start()
     event = threading.Event()

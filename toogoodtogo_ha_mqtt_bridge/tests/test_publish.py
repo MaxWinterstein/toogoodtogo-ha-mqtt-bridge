@@ -115,3 +115,54 @@ def test_check_for_removed_stores_clears_retained(tmp_path: Path) -> None:
             assert published[topic] is None  # empty payload clears the retained message
     finally:
         settings["data_dir"] = original_data_dir
+
+
+@pytest.fixture
+def _topic_settings() -> Generator[None, None, None]:
+    keys = ("mqtt", "homeassistant", "raw")
+    original = {key: settings.get(key) for key in keys}
+    yield
+    for key, value in original.items():
+        settings[key] = value
+
+
+def _publish_one_store() -> dict[str, str]:
+    published: dict[str, str] = {}
+
+    def fake_publish(topic: str, payload: str | None = None, retain: bool = False) -> MagicMock:
+        published[topic] = payload  # type: ignore[assignment]
+        return MagicMock(rc=mqtt.MQTT_ERR_SUCCESS)
+
+    main.mqtt_client = MagicMock()
+    main.mqtt_client.publish.side_effect = fake_publish
+    assert main.publish_stores_data([_fake_shop(stock=3)]) is True
+    return published
+
+
+def test_publish_stores_data_custom_topics(_settings_env: None, _topic_settings: None) -> None:
+    # Configurable topics (#131): data topics use mqtt.base, discovery uses discovery_prefix,
+    # and raw=true publishes the full payload. Defaults reproduce the historical topics.
+    settings["mqtt"] = {"base": "tgtg/data"}
+    settings["homeassistant"] = {"enabled": True, "discovery_prefix": "ha"}
+    settings["raw"] = True
+
+    published = _publish_one_store()
+
+    assert "tgtg/data/toogoodtogo_123/state" in published
+    assert "tgtg/data/toogoodtogo_123/attr" in published
+    assert "tgtg/data/toogoodtogo_123/raw" in published
+    config = json.loads(published["ha/sensor/toogoodtogo_bridge/123/config"])
+    assert config["state_topic"] == "tgtg/data/toogoodtogo_123/state"  # config points at the data base
+
+
+def test_publish_stores_data_homeassistant_disabled(_settings_env: None, _topic_settings: None) -> None:
+    # With HA disabled, no discovery config is published, but state + raw still are (non-HA use).
+    settings["mqtt"] = {}
+    settings["homeassistant"] = {"enabled": False}
+    settings["raw"] = True
+
+    published = _publish_one_store()
+
+    assert not any(topic.endswith("/config") for topic in published)
+    assert "homeassistant/sensor/toogoodtogo_123/state" in published
+    assert "homeassistant/sensor/toogoodtogo_123/raw" in published
