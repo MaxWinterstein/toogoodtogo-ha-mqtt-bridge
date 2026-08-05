@@ -1,7 +1,7 @@
 FROM python:3.14
 
 # renovate: datasource=github-releases depName=uv packageName=astral-sh/uv
-ENV UV_VERSION="0.11.19"
+ENV UV_VERSION="0.12.1"
 RUN pip install uv==$UV_VERSION
 
 # Change the working directory to the `app` directory
