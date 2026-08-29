@@ -518,14 +518,28 @@ def is_latest_version() -> bool:
         logger.exception("Error getting version ID from google playstore. Skipping version check this time.")
         return True
 
-    act_version = version.parse(app_info["version"])
-    token_version = version.parse(tokens["token_version"])
+    try:
+        act_version = version.parse(app_info["version"])
+    except version.InvalidVersion:
+        logger.warning(
+            "Play store reported an unparsable version %r, skipping version check this time.",
+            app_info["version"],
+        )
+        return True
 
     # Fix for users having already a tokens.json contain 'Varies with device'
     # see https://github.com/MaxWinterstein/toogoodtogo-ha-mqtt-bridge/issues/87
-    minor_diff = 999 if str(token_version) == "Varies with device" else act_version.minor - token_version.minor
+    # This has to be caught around the parse: packaging dropped LegacyVersion in
+    # v22, so parse() raises on anything non-PEP440 and the old string compare
+    # below it never got the chance to run.
+    try:
+        token_version: version.Version | None = version.parse(tokens["token_version"])
+    except version.InvalidVersion:
+        token_version = None
 
-    if minor_diff > 2 or act_version.major > token_version.major:
+    minor_diff = 999 if token_version is None else act_version.minor - token_version.minor
+
+    if minor_diff > 2 or (token_version is not None and act_version.major > token_version.major):
         global tgtg_version
         tgtg_version = app_info["version"]
         return False
