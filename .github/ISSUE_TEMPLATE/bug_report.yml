@@ -1,0 +1,45 @@
+name: Bug report
+description: Something is not working as expected
+labels: ["bug"]
+body:
+  - type: dropdown
+    id: install-method
+    attributes:
+      label: How are you running it?
+      options:
+        - Home Assistant add-on
+        - Docker
+        - Native
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Add-on version, Docker image tag or git commit. E.g. `3.5.0.0` for the add-on, `3.6.0` for Docker.
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you expect, and what happened instead?
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Relevant log output. Gets formatted automatically, no backticks needed.
+      render: shell
+
+  - type: checkboxes
+    id: no-credentials
+    attributes:
+      label: Credentials
+      options:
+        - label: I removed my TooGoodToGo email, tokens, cookies and MQTT password from the logs and config I pasted above.
+          required: true
