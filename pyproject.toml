@@ -25,9 +25,12 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://MaxWinterstein.github.io/toogoodtogo-ha-mqtt-bridge/"
+# Both of these pointed at a GitHub Pages site that has never been enabled
+# for this repository, so the two most prominent links in the PyPI sidebar
+# were 404s. The README is the documentation.
+Homepage = "https://github.com/MaxWinterstein/toogoodtogo-ha-mqtt-bridge"
 Repository = "https://github.com/MaxWinterstein/toogoodtogo-ha-mqtt-bridge"
-Documentation = "https://MaxWinterstein.github.io/toogoodtogo-ha-mqtt-bridge/"
+Documentation = "https://github.com/MaxWinterstein/toogoodtogo-ha-mqtt-bridge#readme"
 
 [dependency-groups]
 dev = [
