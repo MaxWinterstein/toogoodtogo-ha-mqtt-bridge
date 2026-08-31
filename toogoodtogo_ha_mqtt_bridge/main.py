@@ -428,7 +428,11 @@ def publish_orders_data(active_orders: dict) -> bool:
     else:
         result_state = publish_state(
             f"{data_base()}/toogoodtogo_next_collection/state",
-            "null",
+            # "None" is the only payload Home Assistant's MQTT sensor reads as
+            # "no value" (PAYLOAD_NONE in homeassistant/components/mqtt/const.py).
+            # "null" is not recognised, and on a device_class: timestamp sensor
+            # it is logged as an invalid state on every poll with no orders.
+            "None",
         )
         result_attrs = publish_state(
             f"{data_base()}/toogoodtogo_next_collection/attr",
