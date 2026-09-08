@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Home Assistant add-on repository
+    url: https://github.com/MaxWinterstein/homeassistant-addons/issues
+    about: Problems with installing or updating the add-on itself belong here.
+  - name: TooGoodToGo API library (tgtg)
+    url: https://github.com/ahivert/tgtg-python/issues
+    about: Login problems, captchas and API errors usually come from the underlying library.
