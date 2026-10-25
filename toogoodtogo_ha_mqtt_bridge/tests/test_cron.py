@@ -32,4 +32,4 @@ def test_calc_next_run(_time: str, _cron: str, expected: str) -> None:
     future = present.shift(seconds=sleep_seconds)
     print(f"Would sleep {present.humanize(future, granularity=['hour', 'minute'])}")
     if not expected_date <= time_date + dt.timedelta(seconds=sleep_seconds) <= expected_date + dt.timedelta(seconds=20):
-        raise RuntimeError("Next runtime seems off")  # noqa: TRY003
+        raise RuntimeError("Next runtime seems off")
