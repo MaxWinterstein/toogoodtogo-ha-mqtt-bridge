@@ -328,7 +328,11 @@ def start_login_portal() -> None:
     try:
         login_portal.start()
     except OSError:
+        # Keep running: saved tokens may well still work, and exiting would only crash-loop on the
+        # same busy port. Without a page, a login that needs a PIN fails loudly instead of waiting
+        # forever for a form nobody can open.
         logger.exception("Could not start the login page; a new email login will not be possible")
+        login_portal = None
 
 
 def relogin() -> bool:

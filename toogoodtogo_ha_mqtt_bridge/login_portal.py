@@ -29,6 +29,7 @@ LOGGED_IN = "logged_in"
 
 MAX_PIN_LENGTH = 32
 MAX_FORM_BYTES = 1024
+REQUEST_TIMEOUT = 10  # seconds
 
 
 class ResendRequested(Exception):
@@ -156,6 +157,7 @@ class LoginPortal:
 
 class _Handler(BaseHTTPRequestHandler):
     portal: LoginPortal  # set per server by _make_handler
+    timeout = REQUEST_TIMEOUT  # a client that stalls mid-request must not hold its thread forever
 
     def log_message(self, format: str, *args: Any) -> None:  # noqa: A002 - stdlib signature
         logger.debug("login page: " + format, *args)
@@ -196,7 +198,13 @@ class _Handler(BaseHTTPRequestHandler):
     def do_POST(self) -> None:
         if not self._allowed():
             return
-        length = int(self.headers.get("Content-Length") or 0)
+        try:
+            length = int(self.headers.get("Content-Length") or 0)
+        except ValueError:
+            length = -1
+        if length < 0:  # read(-1) would wait for the client to close the connection
+            self.send_error(HTTPStatus.BAD_REQUEST)
+            return
         if length > MAX_FORM_BYTES:
             self.send_error(HTTPStatus.REQUEST_ENTITY_TOO_LARGE)
             return

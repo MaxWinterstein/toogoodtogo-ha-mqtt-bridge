@@ -1,3 +1,4 @@
+import socket
 import threading
 import urllib.error
 import urllib.request
@@ -10,9 +11,11 @@ from toogoodtogo_ha_mqtt_bridge.login_portal import (
     CHECKING,
     FAILED,
     LOGGED_IN,
+    REQUEST_TIMEOUT,
     WAITING_FOR_PIN,
     LoginPortal,
     ResendRequested,
+    _Handler,
 )
 
 
@@ -176,3 +179,19 @@ def test_unknown_paths_are_404(portal: LoginPortal) -> None:
         _get(portal, "/etc/passwd")
     assert err.value.code == 404
     assert _post(portal, "/other")[0] == 404
+
+
+def _raw_post(portal: LoginPortal, content_length: str) -> str:
+    """POST with a hand-written Content-Length header; returns the status line."""
+    with socket.create_connection(("127.0.0.1", portal.port), timeout=5) as conn:
+        conn.sendall(f"POST /pin HTTP/1.1\r\nHost: x\r\nContent-Length: {content_length}\r\n\r\n".encode())
+        return conn.makefile("rb").readline().decode().strip()
+
+
+@pytest.mark.parametrize(("content_length", "status"), [("abc", 400), ("-1", 400), ("4096", 413)])
+def test_bad_content_length_is_rejected_without_reading(portal: LoginPortal, content_length: str, status: int) -> None:
+    assert _raw_post(portal, content_length).split()[1] == str(status)
+
+
+def test_handler_threads_have_a_socket_timeout() -> None:
+    assert _Handler.timeout == REQUEST_TIMEOUT > 0

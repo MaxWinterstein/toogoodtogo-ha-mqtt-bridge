@@ -1,6 +1,7 @@
 """The bridge's login against a fake TGTG API: saved tokens, the 401 fallback, the PIN page."""
 
 import json
+import socket
 import threading
 from collections.abc import Generator
 from pathlib import Path
@@ -211,3 +212,21 @@ def test_publish_login_required_announces_a_problem_sensor(bridge: dict) -> None
     assert config["state_topic"] == LOGIN_TOPIC
     assert config["default_entity_id"] == "binary_sensor.toogoodtogo_login_required"
     assert bridge["published"][LOGIN_TOPIC] == "ON"
+
+
+def test_a_busy_login_page_port_does_not_stop_the_bridge(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Saved tokens may still work, so a port clash drops the page instead of exiting."""
+    keys = ("login_portal", "tgtg")
+    original = {key: settings.get(key) for key in keys}
+    with socket.socket() as busy:
+        busy.bind(("0.0.0.0", 0))  # noqa: S104 - must clash with the page's own bind
+        busy.listen()
+        settings["login_portal"] = {"port": busy.getsockname()[1]}
+        settings["tgtg"] = {"email": EMAIL, "language": "en-GB"}
+        monkeypatch.setattr(main, "login_portal", None)
+        try:
+            main.start_login_portal()
+            assert main.login_portal is None
+        finally:
+            for key, value in original.items():
+                settings[key] = value
