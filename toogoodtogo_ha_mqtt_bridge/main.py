@@ -5,6 +5,7 @@ import logging
 import os
 import random
 import re
+import sys
 import threading
 import time
 from datetime import datetime, timedelta
@@ -257,8 +258,17 @@ def ensure_login() -> None:
         email_login()
 
 
+class NoWayToEnterPinError(RuntimeError):
+    def __init__(self) -> None:
+        super().__init__("A new TGTG login needs a PIN, but there is no login page and no terminal to type it into")
+
+
 def email_login() -> None:
     """Run the email + PIN login until it works. Blocks while it waits for the user."""
+    if login_portal is None and not sys.stdin.isatty():
+        # Fail before asking TGTG: every attempt would email the user a PIN nobody can enter,
+        # and the fetch loop retries each cycle.
+        raise NoWayToEnterPinError
     if watchdog:
         watchdog.stop()  # waiting for a PIN is not a hung fetch loop
     try:

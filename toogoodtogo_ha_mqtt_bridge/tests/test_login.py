@@ -230,3 +230,16 @@ def test_a_busy_login_page_port_does_not_stop_the_bridge(monkeypatch: pytest.Mon
         finally:
             for key, value in original.items():
                 settings[key] = value
+
+
+def test_without_a_page_or_terminal_no_login_email_is_requested(
+    fake: FakeTgtg, bridge: dict, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Otherwise every fetch cycle would email the user a PIN they cannot enter anywhere."""
+    monkeypatch.setattr(main, "login_portal", None)
+    monkeypatch.setattr(main.sys.stdin, "isatty", lambda: False)
+    main.tgtg_client = main.new_email_client()
+
+    with pytest.raises(main.NoWayToEnterPinError):
+        main.ensure_login()
+    assert "auth/v5/authByEmail" not in fake.paths()
