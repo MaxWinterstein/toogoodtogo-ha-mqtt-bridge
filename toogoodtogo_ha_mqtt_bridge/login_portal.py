@@ -30,6 +30,7 @@ LOGGED_IN = "logged_in"
 MAX_PIN_LENGTH = 32
 MAX_FORM_BYTES = 1024
 REQUEST_TIMEOUT = 10  # seconds
+LISTENER_RETRY_SECONDS = 60
 
 
 class ResendRequested(Exception):
@@ -56,6 +57,7 @@ class LoginPortal:
         self._listeners: list[Callable[[bool], Any]] = []
         self._login_required: bool | None = None
         self._server: ThreadingHTTPServer | None = None
+        self.listener_retry_seconds: float = LISTENER_RETRY_SECONDS
 
     # --- listeners -------------------------------------------------------------------------
 
@@ -65,14 +67,32 @@ class LoginPortal:
 
     def _set_login_required(self, required: bool) -> None:
         # Called without holding the lock: listeners do network I/O.
-        if self._login_required == required:
-            return
-        self._login_required = required
-        for listener in self._listeners:
+        with self._cond:
+            if self._login_required == required:
+                return
+            self._login_required = required
+        self._deliver(list(self._listeners), required)
+
+    def _deliver(self, listeners: list[Callable[[bool], Any]], required: bool) -> None:
+        """Tell listeners; retry the ones that fail while the state still holds.
+
+        A failed call is not rare: at boot the add-on often starts before Home Assistant Core
+        answers, and a lost "login needed" notice would leave the user waiting for days.
+        """
+        with self._cond:
+            if self._login_required != required:
+                return  # superseded by a newer state; that delivery covers it
+        failed = []
+        for listener in listeners:
             try:
                 listener(required)
             except Exception:
-                logger.exception("Login state listener failed")
+                logger.exception("Login state listener failed; retrying in %ss", self.listener_retry_seconds)
+                failed.append(listener)
+        if failed:
+            timer = threading.Timer(self.listener_retry_seconds, self._deliver, (failed, required))
+            timer.daemon = True
+            timer.start()
 
     # --- called by the login thread --------------------------------------------------------
 

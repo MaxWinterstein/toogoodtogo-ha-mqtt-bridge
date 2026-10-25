@@ -59,6 +59,8 @@ scheduled_jobs: list[Any] = []
 login_portal: LoginPortal | None = None
 # Serialises logins: the fetch loop and an intense fetch can both find the session expired.
 login_lock = threading.Lock()
+# Thread that currently holds login_lock in ensure_login(); only it may start an email login.
+login_owner: int | None = None
 
 DEVICE_INFO = {
     "identifiers": ["toogoodtogo_bridge"],
@@ -186,8 +188,21 @@ def cleanup_loop() -> None:
         sleep((next_run - now).seconds)
 
 
+class LoginPendingError(RuntimeError):
+    def __init__(self) -> None:
+        super().__init__("Not logged in to TGTG yet; waiting for the email login to finish")
+
+
 class BridgeTgtgClient(TgtgClient):  # type: ignore[no-any-unimported]
     """TgtgClient that asks for the email login PIN on the login page instead of on stdin."""
+
+    def login(self) -> None:
+        # Every API call (get_item, get_items, ...) logs in first. Without tokens that means a
+        # new login email, so only ensure_login() may do it; any other thread (e.g. the
+        # next-sales loop) would email the user again and race it for the PIN.
+        if not self._already_logged and login_owner != threading.get_ident():
+            raise LoginPendingError
+        super().login()
 
     def start_polling(self, polling_id: str) -> None:
         if login_portal is None:  # login page disabled: keep the library's terminal prompt
@@ -199,11 +214,21 @@ class BridgeTgtgClient(TgtgClient):  # type: ignore[no-any-unimported]
             try:
                 # Private, but it is exactly the call the library's own prompt makes; tgtg is pinned.
                 self._auth_by_pin(polling_id, pin)
-            except TgtgLoginError:
-                logger.warning("TGTG did not accept the PIN")
-                message = "Too Good To Go did not accept that PIN. Check it and try again, or request a new email."
+            except TgtgLoginError as err:
+                logger.warning("TGTG did not accept the PIN: %s", err)
+                message = describe_pin_error(err)
             else:
                 return
+
+
+def describe_pin_error(err: TgtgLoginError) -> str:  # type: ignore[no-any-unimported]
+    # The library raises TgtgLoginError(status, body) for any non-200 answer to the PIN.
+    status = err.args[0] if err.args else None
+    if status == HTTPStatus.TOO_MANY_REQUESTS:
+        return "Too Good To Go is rate limiting login attempts. Wait a few minutes before trying again."
+    if isinstance(status, int) and status >= HTTPStatus.INTERNAL_SERVER_ERROR:
+        return "Too Good To Go had a problem checking the PIN. Try again in a moment."
+    return "Too Good To Go did not accept that PIN. Check it and try again, or request a new email."
 
 
 def tgtg_base_url() -> str:
@@ -241,21 +266,28 @@ def forget_tokens() -> None:
 
 def ensure_login() -> None:
     """Log in, falling back to a new email login when TGTG rejects the saved session."""
-    global tgtg_client
+    global tgtg_client, login_owner
     with login_lock:
-        if tgtg_client.access_token and tgtg_client.refresh_token:
-            try:
-                tgtg_client.login()
-            except TgtgAPIError as err:
-                if not is_rejected_login(err):
-                    raise
-                logger.warning("TGTG rejected the saved login (%s). Starting a new email login.", err)
-                forget_tokens()
-                tgtg_client = new_email_client()
-            else:
-                login_succeeded()
-                return
-        email_login()
+        login_owner = threading.get_ident()
+        try:
+            if tgtg_client.access_token and tgtg_client.refresh_token:
+                try:
+                    tgtg_client.login()
+                except TgtgAPIError as err:
+                    if not is_rejected_login(err):
+                        raise
+                    logger.warning("TGTG rejected the saved login (%s). Starting a new email login.", err)
+                    # Build the new client first: build_ua() asks the Play Store and can fail,
+                    # and then the saved tokens should still be there for the next attempt.
+                    client = new_email_client()
+                    forget_tokens()
+                    tgtg_client = client
+                else:
+                    login_succeeded()
+                    return
+            email_login()
+        finally:
+            login_owner = None
 
 
 class NoWayToEnterPinError(RuntimeError):
@@ -286,8 +318,8 @@ def email_login() -> None:
     finally:
         if watchdog:
             watchdog.reset()
+    login_succeeded()  # first, so a failing write cannot leave the page stuck on "Working on it"
     write_token_file()
-    login_succeeded()
 
 
 def describe_login_error(err: Exception) -> str:
@@ -881,7 +913,11 @@ def next_sales_loop() -> None:
     while True:
         if favourite_ids:
             for fav_id in favourite_ids:
-                item = tgtg_client.get_item(item_id=fav_id)
+                try:
+                    item = tgtg_client.get_item(item_id=fav_id)
+                except LoginPendingError:
+                    logger.info("Skipping the sales window check while the TGTG login is pending")
+                    break
                 if "next_sales_window_purchase_start" in item:
                     next_sales_window = arrow.get(item["next_sales_window_purchase_start"]).to(tz=settings.timezone)
                     if next_sales_window > arrow.now(tz=settings.timezone):

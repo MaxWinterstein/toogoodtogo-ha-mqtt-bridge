@@ -195,3 +195,39 @@ def test_bad_content_length_is_rejected_without_reading(portal: LoginPortal, con
 
 def test_handler_threads_have_a_socket_timeout() -> None:
     assert _Handler.timeout == REQUEST_TIMEOUT > 0
+
+
+def test_a_failed_listener_is_retried_until_it_succeeds(portal: LoginPortal) -> None:
+    """At boot Home Assistant Core may not answer yet; the "login needed" notice must still arrive."""
+    portal.listener_retry_seconds = 0.05
+    calls: list[bool] = []
+
+    def flaky(required: bool) -> None:
+        calls.append(required)
+        if len(calls) == 1:
+            raise RuntimeError("Home Assistant is still starting")
+
+    portal.add_listener(flaky)
+    result = _wait_for_pin_in_thread(portal)
+    _wait_until(lambda: len(calls) >= 2)
+    assert calls[:2] == [True, True]
+    portal.submit_pin("123456")
+    result["thread"].join(5)
+
+
+def test_a_retry_is_dropped_once_the_state_moved_on(portal: LoginPortal) -> None:
+    portal.listener_retry_seconds = 0.2
+    calls: list[bool] = []
+
+    def fails_on_true(required: bool) -> None:
+        calls.append(required)
+        if required:
+            raise RuntimeError("down")
+
+    portal.add_listener(fails_on_true)
+    result = _wait_for_pin_in_thread(portal)
+    portal.submit_pin("123456")
+    result["thread"].join(5)
+    portal.logged_in("me@example.com")
+    threading.Event().wait(0.5)
+    assert calls == [True, False]  # the stale "login needed" is not re-sent after the login

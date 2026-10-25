@@ -243,3 +243,71 @@ def test_without_a_page_or_terminal_no_login_email_is_requested(
     with pytest.raises(main.NoWayToEnterPinError):
         main.ensure_login()
     assert "auth/v5/authByEmail" not in fake.paths()
+
+
+def test_other_threads_cannot_start_a_second_email_login(fake: FakeTgtg, bridge: dict) -> None:
+    """get_item() logs in by itself; during a pending login that would email the user again."""
+    fake.refresh_status = 401
+    _client_with_saved_tokens()
+    portal = bridge["portal"]
+
+    thread, result = _login_in_thread()
+    _wait_for(portal, WAITING_FOR_PIN)
+    raised: list[Exception] = []
+
+    def next_sales_check() -> None:  # what next_sales_loop does
+        try:
+            main.tgtg_client.get_item(item_id=123)
+        except Exception as err:
+            raised.append(err)
+
+    other = threading.Thread(target=next_sales_check, daemon=True)
+    other.start()
+    other.join(5)
+    assert not other.is_alive(), "a second thread is waiting for the PIN too"
+    assert [type(err) for err in raised] == [main.LoginPendingError]
+    assert fake.paths().count("auth/v5/authByEmail") == 1
+
+    portal.submit_pin("123456")
+    thread.join(5)
+    assert result == {"ok": True}
+
+
+def test_check_recovers_from_a_session_rejected_while_running(fake: FakeTgtg, bridge: dict) -> None:
+    """The path check() takes on every poll: refresh -> 401 -> PIN login -> tokens written."""
+    fake.refresh_status = 401
+    _client_with_saved_tokens()
+    portal = bridge["portal"]
+    outcome: dict = {}
+    thread = threading.Thread(target=lambda: outcome.update(ok=main.relogin()), daemon=True)
+    thread.start()
+    _wait_for(portal, WAITING_FOR_PIN)
+    portal.submit_pin("123456")
+    thread.join(5)
+    assert outcome == {"ok": True}
+    assert json.loads(bridge["tokens"].read_text())["refresh_token"] == "rt-pin"
+
+
+def test_a_play_store_failure_keeps_the_saved_tokens(
+    fake: FakeTgtg, bridge: dict, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    fake.refresh_status = 401
+    bridge["tokens"].write_text("{}")
+    _client_with_saved_tokens()
+
+    def no_play_store() -> str:
+        raise ConnectionError("play.google.com unreachable")
+
+    monkeypatch.setattr(main, "build_ua", no_play_store)
+    with pytest.raises(ConnectionError):
+        main.ensure_login()
+    assert bridge["tokens"].exists()  # the next cycle can still try the refresh
+    assert main.login_owner is None
+
+
+@pytest.mark.parametrize(
+    ("status", "text"),
+    [(400, "did not accept that PIN"), (429, "rate limiting"), (503, "had a problem checking the PIN")],
+)
+def test_pin_errors_are_told_apart(status: int, text: str) -> None:
+    assert text in main.describe_pin_error(tgtg.exceptions.TgtgLoginError(status, b"{}"))
