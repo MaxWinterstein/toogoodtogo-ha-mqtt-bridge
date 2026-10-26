@@ -5,9 +5,11 @@ import logging
 import os
 import random
 import re
+import sys
 import threading
 import time
 from datetime import datetime, timedelta
+from http import HTTPStatus
 from pathlib import Path
 from time import sleep
 from typing import Any
@@ -22,15 +24,23 @@ from google_play_scraper import app
 from packaging import version
 from random_user_agent.params import SoftwareName
 from random_user_agent.user_agent import UserAgent
-from tgtg import TgtgClient
+from tgtg import BASE_URL, TgtgClient
+from tgtg.exceptions import TgtgAPIError, TgtgLoginError
 
 from toogoodtogo_ha_mqtt_bridge.config import settings
+from toogoodtogo_ha_mqtt_bridge.ha_notify import HomeAssistantNotifier
+from toogoodtogo_ha_mqtt_bridge.login_portal import LoginPortal, ResendRequested
 from toogoodtogo_ha_mqtt_bridge.watchdog import Watchdog
 
 logger = logging.getLogger(__name__)
-coloredlogs.install(
-    level="DEBUG", logger=logger, fmt="%(asctime)s [%(levelname)s] %(message)s"
-)  # pretty logging is pretty
+# When run as a script this module logs as __main__, outside the package, so the package's
+# other modules (login page, Home Assistant notices) need the same handler. When imported,
+# __name__ already sits below the package logger and one handler covers both.
+_package_logger = logging.getLogger("toogoodtogo_ha_mqtt_bridge")
+for _logger in {_package_logger, logger if __name__ == "__main__" else _package_logger}:
+    coloredlogs.install(
+        level="DEBUG", logger=_logger, fmt="%(asctime)s [%(levelname)s] %(message)s"
+    )  # pretty logging is pretty
 
 mqtt_client: mqtt.Client = None  # type: ignore[assignment]
 first_run = True
@@ -46,6 +56,11 @@ favourite_ids: list[int] = []
 # reconciles against this snapshot so it never acts on a partially-built favourites list.
 last_successful_favourite_ids: set[str] = set()
 scheduled_jobs: list[Any] = []
+login_portal: LoginPortal | None = None
+# Serialises logins: the fetch loop and an intense fetch can both find the session expired.
+login_lock = threading.Lock()
+# Thread that currently holds login_lock in ensure_login(); only it may start an email login.
+login_owner: int | None = None
 
 DEVICE_INFO = {
     "identifiers": ["toogoodtogo_bridge"],
@@ -173,12 +188,211 @@ def cleanup_loop() -> None:
         sleep((next_run - now).seconds)
 
 
+class LoginPendingError(RuntimeError):
+    def __init__(self) -> None:
+        super().__init__("Not logged in to TGTG yet; waiting for the email login to finish")
+
+
+class BridgeTgtgClient(TgtgClient):  # type: ignore[no-any-unimported]
+    """TgtgClient that asks for the email login PIN on the login page instead of on stdin."""
+
+    def login(self) -> None:
+        # Every API call (get_item, get_items, ...) logs in first. Without tokens that means a
+        # new login email, so only ensure_login() may do it; any other thread (e.g. the
+        # next-sales loop) would email the user again and race it for the PIN.
+        if not self._already_logged and login_owner != threading.get_ident():
+            raise LoginPendingError
+        super().login()
+
+    def start_polling(self, polling_id: str) -> None:
+        if login_portal is None:  # login page disabled: keep the library's terminal prompt
+            super().start_polling(polling_id)
+            return
+        message = ""
+        while True:
+            pin = login_portal.wait_for_pin(self.email, message)  # raises ResendRequested
+            try:
+                # Private, but it is exactly the call the library's own prompt makes; tgtg is pinned.
+                self._auth_by_pin(polling_id, pin)
+            except TgtgLoginError as err:
+                logger.warning("TGTG did not accept the PIN: %s", err)
+                message = describe_pin_error(err)
+            else:
+                return
+
+
+def describe_pin_error(err: TgtgLoginError) -> str:  # type: ignore[no-any-unimported]
+    # The library raises TgtgLoginError(status, body) for any non-200 answer to the PIN.
+    status = err.args[0] if err.args else None
+    if status == HTTPStatus.TOO_MANY_REQUESTS:
+        return "Too Good To Go is rate limiting login attempts. Wait a few minutes before trying again."
+    if isinstance(status, int) and status >= HTTPStatus.INTERNAL_SERVER_ERROR:
+        return "Too Good To Go had a problem checking the PIN. Try again in a moment."
+    return "Too Good To Go did not accept that PIN. Check it and try again, or request a new email."
+
+
+def tgtg_base_url() -> str:
+    """TGTG API base URL. Only meant to be overridden to point the bridge at a test server."""
+    return str((settings.get("tgtg") or {}).get("base_url") or BASE_URL)
+
+
+def new_email_client() -> BridgeTgtgClient:
+    return BridgeTgtgClient(
+        url=tgtg_base_url(),
+        email=settings.tgtg.email,
+        language=settings.tgtg.language,
+        timeout=30,
+        user_agent=build_ua(),
+    )
+
+
+def is_rejected_login(err: Exception) -> bool:
+    """True if TGTG refused the saved session itself, so only a new email login can help.
+
+    403 is deliberately excluded: that is DataDome's bot protection, and a fresh login would
+    just send the user another email and run into the same wall.
+    """
+    return isinstance(err, TgtgAPIError) and bool(err.args) and err.args[0] == HTTPStatus.UNAUTHORIZED
+
+
+def forget_tokens() -> None:
+    global tokens
+    tokens = {}
+    path = settings.get("data_dir") + "/tokens.json"
+    if os.path.isfile(path):
+        os.remove(path)
+        logger.info("Removed the rejected tokens.json")
+
+
+def ensure_login() -> None:
+    """Log in, falling back to a new email login when TGTG rejects the saved session."""
+    global tgtg_client, login_owner
+    with login_lock:
+        login_owner = threading.get_ident()
+        try:
+            if tgtg_client.access_token and tgtg_client.refresh_token:
+                try:
+                    tgtg_client.login()
+                except TgtgAPIError as err:
+                    if not is_rejected_login(err):
+                        raise
+                    logger.warning("TGTG rejected the saved login (%s). Starting a new email login.", err)
+                    # Build the new client first: build_ua() asks the Play Store and can fail,
+                    # and then the saved tokens should still be there for the next attempt.
+                    client = new_email_client()
+                    forget_tokens()
+                    tgtg_client = client
+                else:
+                    login_succeeded()
+                    return
+            email_login()
+        finally:
+            login_owner = None
+
+
+class NoWayToEnterPinError(RuntimeError):
+    def __init__(self) -> None:
+        super().__init__("A new TGTG login needs a PIN, but there is no login page and no terminal to type it into")
+
+
+def email_login() -> None:
+    """Run the email + PIN login until it works. Blocks while it waits for the user."""
+    if login_portal is None and not sys.stdin.isatty():
+        # Fail before asking TGTG: every attempt would email the user a PIN nobody can enter,
+        # and the fetch loop retries each cycle.
+        raise NoWayToEnterPinError
+    if watchdog:
+        watchdog.stop()  # waiting for a PIN is not a hung fetch loop
+    try:
+        while True:
+            try:
+                tgtg_client.login()
+                break
+            except ResendRequested:
+                logger.info("A new login email was requested")
+            except Exception as err:
+                if login_portal is None:
+                    raise
+                logger.exception("TGTG email login failed")
+                login_portal.wait_for_retry(settings.tgtg.email, describe_login_error(err))
+    finally:
+        if watchdog:
+            watchdog.reset()
+    login_succeeded()  # first, so a failing write cannot leave the page stuck on "Working on it"
+    write_token_file()
+
+
+def describe_login_error(err: Exception) -> str:
+    if isinstance(err, TgtgAPIError) and err.args and err.args[0] == HTTPStatus.TOO_MANY_REQUESTS:
+        return "Too Good To Go is rate limiting login attempts. Wait a while before requesting a new email."
+    if isinstance(err, TgtgAPIError) and err.args and err.args[0] == HTTPStatus.FORBIDDEN:
+        return "Too Good To Go's bot protection blocked the login. Try again later."
+    return f"Too Good To Go refused the login: {err}"
+
+
+def login_succeeded() -> None:
+    if login_portal is not None:
+        login_portal.logged_in(settings.tgtg.email)
+
+
+def publish_login_required(required: bool) -> None:
+    """Expose the login state as a Home Assistant 'problem' binary sensor."""
+    if mqtt_client is None or not homeassistant_enabled():
+        return
+    state_topic = f"{discovery_prefix()}/binary_sensor/toogoodtogo_login_required/state"
+    mqtt_client.publish(
+        f"{discovery_prefix()}/binary_sensor/toogoodtogo_bridge/login_required/config",
+        json.dumps({
+            **entity_naming("binary_sensor.toogoodtogo_login_required", "Login required"),
+            "icon": "mdi:account-key",
+            "device_class": "problem",
+            "entity_category": "diagnostic",
+            "state_topic": state_topic,
+            "device": DEVICE_INFO,
+            "unique_id": "toogoodtogo_login_required",
+        }),
+        retain=True,
+    )
+    publish_state(state_topic, "ON" if required else "OFF")
+
+
+def start_login_portal() -> None:
+    """Start the PIN login page unless it is disabled with ``login_portal.enabled: false``."""
+    global login_portal
+    config = settings.get("login_portal") or {}
+    if not config.get("enabled", True):
+        return
+    login_portal = LoginPortal(port=int(config.get("port", 8099)), allowed_ips=config.get("allowed_ips") or ())
+    login_portal.add_listener(publish_login_required)
+    notifier = HomeAssistantNotifier.from_environment(email=settings.tgtg.email)
+    if notifier:
+        login_portal.add_listener(notifier.login_required)
+    try:
+        login_portal.start()
+    except OSError:
+        # Keep running: saved tokens may well still work, and exiting would only crash-loop on the
+        # same busy port. Without a page, a login that needs a PIN fails loudly instead of waiting
+        # forever for a form nobody can open.
+        logger.exception("Could not start the login page; a new email login will not be possible")
+        login_portal = None
+
+
+def relogin() -> bool:
+    """Refresh the session before a fetch; False if that failed."""
+    try:
+        ensure_login()
+    except Exception:
+        logger.exception("Error logging in to TGTG")
+        return False
+    write_token_file()
+    return True
+
+
 def check() -> bool:
     global first_run
 
-    if not first_run:
-        tgtg_client.login()
-        write_token_file()
+    if not first_run and not relogin():
+        return False
 
     try:
         shops = tgtg_client.get_items(page_size=400)
@@ -626,7 +840,8 @@ def update_ua() -> None:
 
 def rebuild_tgtg_client() -> None:
     global tgtg_client
-    tgtg_client = TgtgClient(
+    tgtg_client = BridgeTgtgClient(
+        url=tgtg_base_url(),
         cookie=tokens["cookie"],
         access_token=tokens["access_token"],
         refresh_token=tokens["refresh_token"],
@@ -674,10 +889,8 @@ def fetch_loop(event: Any) -> None:
     logger.info("Starting loop")
 
     create_data_dir()
-    token_exits = check_existing_token_file()
-    tgtg_client.login()
-    if not token_exits and tgtg_client.access_token:
-        write_token_file()
+    check_existing_token_file()
+    ensure_login()
 
     event.wait(calc_next_run())
     while True:
@@ -700,7 +913,11 @@ def next_sales_loop() -> None:
     while True:
         if favourite_ids:
             for fav_id in favourite_ids:
-                item = tgtg_client.get_item(item_id=fav_id)
+                try:
+                    item = tgtg_client.get_item(item_id=fav_id)
+                except LoginPendingError:
+                    logger.info("Skipping the sales window check while the TGTG login is pending")
+                    break
                 if "next_sales_window_purchase_start" in item:
                     next_sales_window = arrow.get(item["next_sales_window_purchase_start"]).to(tz=settings.timezone)
                     if next_sales_window > arrow.now(tz=settings.timezone):
@@ -947,9 +1164,7 @@ def run_pending_schedules() -> None:
 @click.version_option(package_name="toogoodtogo_ha_mqtt_bridge")
 def start() -> None:
     global tgtg_client, watchdog, mqtt_client
-    tgtg_client = TgtgClient(
-        email=settings.tgtg.email, language=settings.tgtg.language, timeout=30, user_agent=build_ua()
-    )
+    tgtg_client = new_email_client()
 
     watchdog = Watchdog(
         timeout=calc_timeout(),
@@ -973,6 +1188,8 @@ def start() -> None:
             register_fetch_sensor()
 
     mqtt_client.loop_start()
+    start_login_portal()
+
     event = threading.Event()
     thread = threading.Thread(target=fetch_loop, args=(event,))
     thread.start()

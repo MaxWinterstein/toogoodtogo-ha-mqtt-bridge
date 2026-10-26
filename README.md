@@ -131,10 +131,28 @@ are unaffected.
 - `homeassistant.discovery_prefix` — Home Assistant's MQTT discovery prefix, if you've customised it in HA. Default `homeassistant`.
 - `raw` — also publish the full, unprocessed store payload to `<mqtt.base>/toogoodtogo_<id>/raw`. Default `false`.
 
+#### `login_portal` (optional)
+
+Logging in to Too Good To Go needs a PIN that is sent by email. The bridge serves a small
+login page where you enter it, on port `8099` by default. The Home Assistant add-on shows this
+page as its Web UI, and also raises a notification and turns on the `Login required` problem
+sensor when a PIN is needed. If Too Good To Go later rejects the saved login, the bridge
+deletes it and starts a new email login on its own instead of crash-looping.
+
+```json
+{
+  "login_portal": { "enabled": true, "port": 8099, "allowed_ips": [] }
+}
+```
+
+- `port` — where the login page listens. Publish it in Docker (`-p 8099:8099`) and open `http://<host>:8099/`.
+- `allowed_ips` — only answer these client addresses. Empty (the default) allows everyone; the page is unauthenticated, so do not expose it to the internet.
+- `enabled` — set to `false` to fall back to typing the PIN into the terminal, which only works with `docker run -ti`.
+
 And start with the mounted settings file, e.g. for macOS:
 
 ```bash
-docker run --rm -ti --pull always -v $PWD/settings.local.json:/app/settings.local.json -v $PWD/data/:/data -v /etc/localtime:/etc/localtime:ro maxwinterstein/toogoodtogo-ha-mqtt-bridge
+docker run --rm -ti --pull always -p 8099:8099 -v $PWD/settings.local.json:/app/settings.local.json -v $PWD/data/:/data -v /etc/localtime:/etc/localtime:ro maxwinterstein/toogoodtogo-ha-mqtt-bridge
 ```
 
 Or using docker-compose:
@@ -149,6 +167,8 @@ services:
       - ./settings.local.json:/app/settings.local.json
       - ./data:/data
       - /etc/localtime:/etc/localtime:ro
+    ports:
+      - "8099:8099" # login page for the email PIN
     restart: unless-stopped
 ```
 

@@ -28,5 +28,8 @@ ENV PATH="/app/.venv/bin:$PATH"
 RUN python toogoodtogo_ha_mqtt_bridge/main.py --version
 
 # Run
+# Login page for the email PIN (see README, `login_portal`)
+EXPOSE 8099
+
 ENV DYNACONF_DATA_DIR=/data
 CMD ["python", "toogoodtogo_ha_mqtt_bridge/main.py"]

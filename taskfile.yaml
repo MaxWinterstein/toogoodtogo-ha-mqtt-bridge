@@ -55,19 +55,19 @@ tasks:
     desc: "▶️ Build and run for linux/arm64"
     dir: toogoodtogo_ha_mqtt_bridge
     deps: ["build:docker:arm64"]
-    cmd: docker run --rm -ti -v $PWD/settings.local.json:/app/settings.local.json -v $PWD/data/:/data -v /etc/localtime:/etc/localtime:ro toogoodtogo_ha_mqtt_bridge:localdev-arm64
+    cmd: docker run --rm -ti -p 8099:8099 -v $PWD/settings.local.json:/app/settings.local.json -v $PWD/data/:/data -v /etc/localtime:/etc/localtime:ro toogoodtogo_ha_mqtt_bridge:localdev-arm64
 
   run:docker:amd64:
     desc: "▶️ Build and run for linux/amd64"
     dir: toogoodtogo_ha_mqtt_bridge
     deps: ["build:docker:amd64"]
-    cmd: docker run --rm -ti -v $PWD/settings.local.json:/app/settings.local.json -v $PWD/data/:/data -v /etc/localtime:/etc/localtime:ro toogoodtogo_ha_mqtt_bridge:localdev-amd64
+    cmd: docker run --rm -ti -p 8099:8099 -v $PWD/settings.local.json:/app/settings.local.json -v $PWD/data/:/data -v /etc/localtime:/etc/localtime:ro toogoodtogo_ha_mqtt_bridge:localdev-amd64
 
   run:docker:arm7:
     desc: "▶️ Build and run for linux/arm7"
     dir: toogoodtogo_ha_mqtt_bridge
     deps: ["build:docker:arm7"]
-    cmd: docker run --rm -ti -v $PWD/settings.local.json:/app/settings.local.json -v $PWD/data/:/data -v /etc/localtime:/etc/localtime:ro toogoodtogo_ha_mqtt_bridge:localdev-arm7
+    cmd: docker run --rm -ti -p 8099:8099 -v $PWD/settings.local.json:/app/settings.local.json -v $PWD/data/:/data -v /etc/localtime:/etc/localtime:ro toogoodtogo_ha_mqtt_bridge:localdev-arm7
 
   ## run
   run:
